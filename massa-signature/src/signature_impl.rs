@@ -3,7 +3,7 @@
 use crate::error::MassaSignatureError;
 use massa_hash::Hash;
 use secp256k1::{schnorr, Message, SECP256K1};
-use std::{convert::TryInto, str::FromStr};
+use std::{convert::TryInto, str::FromStr, sync::atomic::AtomicUsize};
 
 /// Size of a private key
 pub const PRIVATE_KEY_SIZE_BYTES: usize = 32;
@@ -14,6 +14,8 @@ pub const SIGNATURE_SIZE_BYTES: usize = 64;
 const PRIVATE_KEY_STRING_PREFIX: &str = "PRI";
 const PUBLIC_KEY_STRING_PREFIX: &str = "PUB";
 const SIGNATURE_STRING_PREFIX: &str = "SIG";
+
+static SIG_COUNT: AtomicUsize = AtomicUsize::new(0);
 
 /// `PrivateKey` used to sign messages.
 /// Schnorr signatures require a [KeyPair](secp256k1::KeyPair) to be signed.
@@ -789,7 +791,12 @@ pub fn verify_signature(
     public_key: &PublicKey,
 ) -> Result<(), MassaSignatureError> {
     let message = Message::from_slice(hash.to_bytes())?;
-    Ok(SECP256K1.verify_schnorr(&signature.0, &message, &public_key.0)?)
+    let cnt = SIG_COUNT.fetch_add(1, std::sync::atomic::Ordering::SeqCst) + 1;
+    let res = SECP256K1.verify_schnorr(&signature.0, &message, &public_key.0)?;
+    if cnt % 1000 == 0 {
+        println!("Signature verifs = {}", cnt);
+    }
+    Ok(res)
 }
 
 /// Generate a random private key from a RNG.
