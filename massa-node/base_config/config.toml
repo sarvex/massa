@@ -165,7 +165,14 @@
 [bootstrap]
     # list of bootstrap (ip, node id)
     bootstrap_list = [
+        ["149.202.86.103:31245", "2Fyi8WsZQR8QibNh5pBSdAJ8tLLo5ryVizjbipvyHAuAdRSHgm"],
+        ["149.202.89.125:31245", "2Zr27YCr8MaHTC41ZLWVquyrM8cbMt8jJi6fttHQSnMxL3g1uD"],
+        ["158.69.120.215:31245", "2Hujf2rHBquDrhixnw3dQTHaZMGp5xJq4q766dTRwy6v224CAi"],
         ["158.69.23.120:31245", "CzhbcUMKLmnkg9vzZUHVH6buzE22oToDxW7nndnYyETSh2fYn"],
+        ["198.27.74.5:31245", "wQbN87JXJysgCLMHmHCfwQPivqj4WUTViB2NN2WBKZ2U4oLbm"],
+        ["198.27.74.52:31245", "FshA2S8YhpHBXkuFeKeq8tVF34FtYSJ3wk2LSxgvMZYkDmY23"],
+        ["54.36.174.177:31245", "xzGjgD7BBxTJZYo4p522TQzTkMUbKF3cVgfvuwjVdzo4XJgDM"],
+        ["51.75.60.228:31245", "2jSHRWDv7S1RR4TuQLYHPw4mEawQVBxVARbgoZByH4s7cYrnVN"]
     ]
     # [optionnal] port on which to listen for incoming bootstrap requests
     bind = "[::]:31245"
@@ -176,9 +183,9 @@
     # if ping is too high bootstrap will be interrupted after max_ping milliseconds
     max_ping = 10000
     # timeout for incoming message readout
-    read_timeout = 10000
+    read_timeout = 100000
     # timeout for message sending
-    write_timeout = 10000
+    write_timeout = 100000
     # timeout for incoming error message readout
     read_error_timeout = 200
     # timeout for message error sending

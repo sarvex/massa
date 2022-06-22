@@ -275,6 +275,7 @@ async fn bootstrap_from_server(
                     }
                     other => return Err(BootstrapError::UnexpectedServerMessage(other)),
                 };
+                println!("{:#?}", state);
                 global_bootstrap_state.pos = Some(state.0);
                 global_bootstrap_state.graph = Some(state.1);
                 *next_bootstrap_message = None;
