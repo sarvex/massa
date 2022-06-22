@@ -77,6 +77,7 @@ impl BootstrapClientBinder {
             self.duplex.read_exact(&mut msg_len_bytes[..]).await?;
             u32::from_be_bytes_min(&msg_len_bytes, self.max_bootstrap_message_size)?.0
         };
+	println!("Received message of size {:#?}", msg_len);
 
         // read message, check signature and check signature of the message sent just before then deserialize it
         let message = {
@@ -102,12 +103,14 @@ impl BootstrapClientBinder {
                 msg
             }
         };
+	println!("FInish reading");
         Ok(message)
     }
 
     #[allow(dead_code)]
     /// Send a message to the bootstrap server
     pub async fn send(&mut self, msg: &BootstrapClientMessage) -> Result<(), BootstrapError> {
+	println!("send = {:#?}", msg);
         let msg_bytes = msg.to_bytes_compact()?;
         let msg_len: u32 = msg_bytes.len().try_into().map_err(|e| {
             BootstrapError::GeneralError(format!("bootstrap message too large to encode: {}", e))
