@@ -170,6 +170,11 @@ impl Storage {
         res
     }
 
+    // Note: It's a guess but we are really doing the same thing than an Arc here. We also
+    // includes the risk to call multiple times claim and drop by error. We should add a guard
+    // in these 2 functions. Otherwise, an arc can be used, you can get the reference counter and
+    // remove if only 1 thread has the object
+
     /// internal helper to locally claim a reference to an object
     fn internal_claim_refs<IdT: Id + PartialEq + Eq + Hash + PreHashed + Copy>(
         ids: &Set<IdT>,
