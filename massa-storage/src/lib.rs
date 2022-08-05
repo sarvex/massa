@@ -16,6 +16,7 @@ use massa_models::{
     BlockId, EndorsementId, OperationId, WrappedBlock, WrappedEndorsement, WrappedOperation,
 };
 use parking_lot::{RwLock, RwLockWriteGuard};
+use std::collections::hash_map::Entry;
 use std::hash::Hash;
 use std::{collections::hash_map, sync::Arc};
 
@@ -182,6 +183,37 @@ impl Storage {
         }
     }
 
+    /// internal helper to drop a reference to an object
+    /// Returns true if nobody has the ownership of the object, false otherwise
+    fn internal_drop_refs<IdT: Id + PartialEq + Eq + Hash + PreHashed + Copy>(
+        ids: &Set<IdT>,
+        owners: &mut RwLockWriteGuard<Map<IdT, usize>>,
+        local_used_ids: &mut Set<IdT>,
+    ) -> Set<IdT> {
+        let mut ret = Set::default();
+        for &id in ids {
+            let mut entry = match owners.entry(id) {
+                Entry::Occupied(entry) => entry,
+                _ => {
+                    local_used_ids.remove(&id);
+                    ret.insert(id);
+                    continue;
+                }
+            };
+            let remove = match entry.get_mut().checked_sub(1) {
+                Some(v) => v == 0,
+                None => true,
+            };
+
+            if remove {
+                entry.remove();
+                local_used_ids.remove(&id);
+                ret.insert(id);
+            }
+        }
+        ret
+    }
+
     /// get the block reference ownership
     pub fn get_block_refs(&self) -> &Set<BlockId> {
         &self.local_used_blocks
@@ -243,6 +275,22 @@ impl Storage {
                 }
             }
         }
+    }
+
+    /// Remove blocks referenced by an id. Start by drop a local ownership on the block and
+    /// if nobody has it, remove the block definitivelly
+    pub fn remove_blocks(&mut self, block_ids: &[BlockId]) {
+        massa_trace!("storage.storage.remove_blocks", { "block_ids": block_ids });
+        let mut blocks = self.blocks.write();
+        let mut owners = self.block_owners.write();
+        let rm_list = Storage::internal_drop_refs(
+            &block_ids.iter().copied().collect(),
+            &mut owners,
+            &mut self.local_used_blocks,
+        );
+        rm_list.iter().for_each(|id| {
+            blocks.remove(id);
+        });
     }
 
     /// Store a block
