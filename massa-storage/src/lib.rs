@@ -21,7 +21,7 @@ use std::hash::Hash;
 use std::{collections::hash_map, sync::Arc};
 
 /// A storage system for objects (blocks, operations...), shared by various components.
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Storage {
     /// global block storage
     blocks: Arc<RwLock<Map<BlockId, Arc<RwLock<WrappedBlock>>>>>,
