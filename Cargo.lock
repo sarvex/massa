@@ -1651,6 +1651,7 @@ dependencies = [
  "jsonrpc-derive",
  "jsonrpc-http-server",
  "massa_consensus_exports",
+ "massa_execution_exports",
  "massa_graph",
  "massa_hash",
  "massa_models",
