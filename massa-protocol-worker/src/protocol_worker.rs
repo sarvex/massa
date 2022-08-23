@@ -942,8 +942,6 @@ impl ProtocolWorker {
 
             let mut endorsements = self.storage.clone_without_refs();
             endorsements.store_endorsements(new_endorsements.into_values().collect());
-            self.storage
-                .claim_endorsement_refs(endorsements.get_local_endorsement_ids());
 
             // Add to pool, propagate if required
             self.pool_controller.add_endorsements(endorsements);
