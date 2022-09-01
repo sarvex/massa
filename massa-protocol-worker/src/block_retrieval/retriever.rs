@@ -48,7 +48,7 @@ pub(crate) struct BlockRetriever {
     worker_event_rx: mpsc::Receiver<WorkerEvent>,
     nodes: Arc<RwLock<HashMap<NodeId, NodeInfo>>>,
     workers: PreHashMap<BlockId, WorkerInfo>,
-    storage: Storage
+    storage: Storage,
 }
 
 impl BlockRetriever {
@@ -56,7 +56,7 @@ impl BlockRetriever {
         protocol_event_sender: mpsc::Sender<ProtocolEvent>,
         network_command_tx: NetworkCommandSender,
         nodes: Arc<RwLock<HashMap<NodeId, NodeInfo>>>,
-        storage: &Storage
+        storage: &Storage,
     ) -> (JoinHandle<()>, mpsc::Sender<BlockRetrieverCommand>) {
         let (command_tx, command_rx) = mpsc::channel(1024);
         let (worker_event_tx, worker_event_rx) = mpsc::channel(1024);
@@ -69,7 +69,7 @@ impl BlockRetriever {
                 worker_event_rx,
                 nodes,
                 workers: Default::default(),
-                storage: storage.clone_without_refs()
+                storage: storage.clone_without_refs(),
             }
             .run()
             .await
@@ -135,14 +135,14 @@ impl BlockRetriever {
         let worker_event_tx = self.worker_event_tx.clone();
         let (worker_command_tx, worker_command_rx) = mpsc::channel(1024);
         let nodes = self.nodes.clone();
-        let storage= self.storage.clone_without_refs();
+        let storage = self.storage.clone_without_refs();
         let handle = tokio::spawn(async move {
             Worker::new(
                 network_command_tx,
                 worker_command_rx,
                 worker_event_tx,
                 nodes,
-                storage
+                storage,
             )
             .run(block_id, opt_header)
             .await
