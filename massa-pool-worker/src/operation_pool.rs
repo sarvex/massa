@@ -1,5 +1,6 @@
 //! Copyright (c) 2022 MASSA LABS <info@massa.net>
 
+use crate::types::{OperationInfo, PoolOperationCursor};
 use massa_execution_exports::ExecutionController;
 use massa_models::{
     address::Address,
@@ -12,7 +13,6 @@ use massa_pool_exports::PoolConfig;
 use massa_storage::Storage;
 use std::collections::BTreeSet;
 use tracing::info;
-use crate::types::{OperationInfo, PoolOperationCursor};
 
 pub struct OperationPool {
     /// config
@@ -173,7 +173,6 @@ impl OperationPool {
             &Default::default(),
         ));
         info!("TEST: Storage extended");
-
 
         // drop removed ops from storage
         self.storage.drop_operation_refs(&removed);

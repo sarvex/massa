@@ -28,10 +28,10 @@ use massa_models::{
 };
 use operation_indexes::OperationIndexes;
 use parking_lot::{RwLock, RwLockReadGuard, RwLockWriteGuard};
-use tracing::info;
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::{collections::hash_map, sync::Arc};
+use tracing::info;
 
 /// A storage system for objects (blocks, operations...), shared by various components.
 pub struct Storage {
@@ -226,11 +226,13 @@ impl Storage {
             return claimed;
         }
 
-        let owners = &mut self.block_owners.write();
-
         // check that all IDs are owned
-        claimed.extend(ids.iter().filter(|id| owners.contains_key(id)));
+        {
+            let owners = self.block_owners.read();
+            claimed.extend(ids.iter().filter(|id| owners.contains_key(id)));
+        }
 
+        let owners = &mut self.block_owners.write();
         // effectively add local ownership on the refs
         Storage::internal_claim_refs(&claimed, owners, &mut self.local_used_blocks);
 
@@ -242,32 +244,36 @@ impl Storage {
         if ids.is_empty() {
             return;
         }
-        let mut owners = self.block_owners.write();
-        let mut orphaned_ids = Vec::new();
-        for id in ids {
-            if !self.local_used_blocks.remove(id) {
-                // the object was already not referenced locally
-                continue;
-            }
-            match owners.entry(*id) {
-                hash_map::Entry::Occupied(mut occ) => {
-                    let res_count = {
-                        let cnt = occ.get_mut();
-                        *cnt = cnt
-                            .checked_sub(1)
-                            .expect("less than 1 owner on storage object reference drop");
-                        *cnt
-                    };
-                    if res_count == 0 {
-                        orphaned_ids.push(*id);
-                        occ.remove();
+
+        let orphaned_ids = {
+            let mut owners = self.block_owners.write();
+            let mut orphaned_ids = Vec::new();
+            for id in ids {
+                if !self.local_used_blocks.remove(id) {
+                    // the object was already not referenced locally
+                    continue;
+                }
+                match owners.entry(*id) {
+                    hash_map::Entry::Occupied(mut occ) => {
+                        let res_count = {
+                            let cnt = occ.get_mut();
+                            *cnt = cnt
+                                .checked_sub(1)
+                                .expect("less than 1 owner on storage object reference drop");
+                            *cnt
+                        };
+                        if res_count == 0 {
+                            orphaned_ids.push(*id);
+                            occ.remove();
+                        }
+                    }
+                    hash_map::Entry::Vacant(_vac) => {
+                        panic!("missing object in storage on storage object reference drop");
                     }
                 }
-                hash_map::Entry::Vacant(_vac) => {
-                    panic!("missing object in storage on storage object reference drop");
-                }
             }
-        }
+            orphaned_ids
+        };
         // if there are orphaned objects, remove them from storage
         if !orphaned_ids.is_empty() {
             let mut blocks = self.blocks.write();
@@ -281,10 +287,12 @@ impl Storage {
     /// Note that this also claims a local reference to the block
     pub fn store_block(&mut self, block: WrappedBlock) {
         let id = block.id;
-        let mut blocks = self.blocks.write();
-        let mut owners = self.block_owners.write();
-        blocks.insert(block);
+        {
+            let mut blocks = self.blocks.write();
+            blocks.insert(block);
+        }
         // update local reference counters
+        let mut owners = self.block_owners.write();
         Storage::internal_claim_refs(
             &vec![id].into_iter().collect(),
             &mut owners,
@@ -304,12 +312,14 @@ impl Storage {
             return claimed;
         }
 
-        let owners = &mut self.operation_owners.write();
-
         // check that all IDs are owned
-        claimed.extend(ids.iter().filter(|id| owners.contains_key(id)));
+        {
+            let owners = self.operation_owners.read();
+            claimed.extend(ids.iter().filter(|id| owners.contains_key(id)));
+        }
 
         // effectively add local ownership on the refs
+        let owners = &mut self.operation_owners.write();
         Storage::internal_claim_refs(&claimed, owners, &mut self.local_used_ops);
 
         claimed
@@ -326,32 +336,35 @@ impl Storage {
         if ids.is_empty() {
             return;
         }
-        let mut owners = self.operation_owners.write();
-        let mut orphaned_ids = Vec::new();
-        for id in ids {
-            if !self.local_used_ops.remove(id) {
-                // the object was already not referenced locally
-                continue;
-            }
-            match owners.entry(*id) {
-                hash_map::Entry::Occupied(mut occ) => {
-                    let res_count = {
-                        let cnt = occ.get_mut();
-                        *cnt = cnt
-                            .checked_sub(1)
-                            .expect("less than 1 owner on storage object reference drop");
-                        *cnt
-                    };
-                    if res_count == 0 {
-                        orphaned_ids.push(*id);
-                        occ.remove();
+        let orphaned_ids = {
+            let mut owners = self.operation_owners.write();
+            let mut orphaned_ids = Vec::new();
+            for id in ids {
+                if !self.local_used_ops.remove(id) {
+                    // the object was already not referenced locally
+                    continue;
+                }
+                match owners.entry(*id) {
+                    hash_map::Entry::Occupied(mut occ) => {
+                        let res_count = {
+                            let cnt = occ.get_mut();
+                            *cnt = cnt
+                                .checked_sub(1)
+                                .expect("less than 1 owner on storage object reference drop");
+                            *cnt
+                        };
+                        if res_count == 0 {
+                            orphaned_ids.push(*id);
+                            occ.remove();
+                        }
+                    }
+                    hash_map::Entry::Vacant(_vac) => {
+                        panic!("missing object in storage on storage object reference drop");
                     }
                 }
-                hash_map::Entry::Vacant(_vac) => {
-                    panic!("missing object in storage on storage object reference drop");
-                }
             }
-        }
+            orphaned_ids
+        };
         // if there are orphaned objects, remove them from storage
         info!("TEST: BEFORE CLEAN ORPHANS size = {}", orphaned_ids.len());
         if !orphaned_ids.is_empty() {
@@ -370,18 +383,19 @@ impl Storage {
             return;
         }
         info!("TEST: After check empty");
-        let mut op_store = self.operations.write();
-        info!("TEST: Acquire 1 lock");
-        info!("TEST: op_store size = {}", op_store.operations.len());
+        let ids: PreHashSet<OperationId> = operations.iter().map(|op| op.id).collect();
+        info!("TEST: collect ids");
+        {
+            let mut op_store = self.operations.write();
+            info!("TEST: Acquire 1 lock");
+            for op in operations {
+                op_store.insert(op);
+            }
+        }
+        info!("TEST: After insert ids");
         let mut owners = self.operation_owners.write();
         info!("TEST: op owner size = {}", owners.len());
         info!("TEST: After 2 lock");
-        let ids: PreHashSet<OperationId> = operations.iter().map(|op| op.id).collect();
-        info!("TEST: collect ids");
-        for op in operations {
-            op_store.insert(op);
-        }
-        info!("TEST: After insert ids");
         Storage::internal_claim_refs(&ids, &mut owners, &mut self.local_used_ops);
         info!("TEST: After claim ids");
     }
@@ -413,12 +427,14 @@ impl Storage {
             return claimed;
         }
 
-        let owners = &mut self.endorsement_owners.write();
-
         // check that all IDs are owned
-        claimed.extend(ids.iter().filter(|id| owners.contains_key(id)));
+        {
+            let owners = self.endorsement_owners.read();
+            claimed.extend(ids.iter().filter(|id| owners.contains_key(id)));
+        }
 
         // effectively add local ownership on the refs
+        let owners = &mut self.endorsement_owners.write();
         Storage::internal_claim_refs(&claimed, owners, &mut self.local_used_endorsements);
 
         claimed
@@ -435,32 +451,35 @@ impl Storage {
         if ids.is_empty() {
             return;
         }
-        let mut owners = self.endorsement_owners.write();
-        let mut orphaned_ids = Vec::new();
-        for id in ids {
-            if !self.local_used_endorsements.remove(id) {
-                // the object was already not referenced locally
-                continue;
-            }
-            match owners.entry(*id) {
-                hash_map::Entry::Occupied(mut occ) => {
-                    let res_count = {
-                        let cnt = occ.get_mut();
-                        *cnt = cnt
-                            .checked_sub(1)
-                            .expect("less than 1 owner on storage object reference drop");
-                        *cnt
-                    };
-                    if res_count == 0 {
-                        orphaned_ids.push(*id);
-                        occ.remove();
+        let orphaned_ids = {
+            let mut owners = self.endorsement_owners.write();
+            let mut orphaned_ids = Vec::new();
+            for id in ids {
+                if !self.local_used_endorsements.remove(id) {
+                    // the object was already not referenced locally
+                    continue;
+                }
+                match owners.entry(*id) {
+                    hash_map::Entry::Occupied(mut occ) => {
+                        let res_count = {
+                            let cnt = occ.get_mut();
+                            *cnt = cnt
+                                .checked_sub(1)
+                                .expect("less than 1 owner on storage object reference drop");
+                            *cnt
+                        };
+                        if res_count == 0 {
+                            orphaned_ids.push(*id);
+                            occ.remove();
+                        }
+                    }
+                    hash_map::Entry::Vacant(_vac) => {
+                        panic!("missing object in storage on storage object reference drop");
                     }
                 }
-                hash_map::Entry::Vacant(_vac) => {
-                    panic!("missing object in storage on storage object reference drop");
-                }
             }
-        }
+            orphaned_ids
+        };
         // if there are orphaned objects, remove them from storage
         if !orphaned_ids.is_empty() {
             let mut endos = self.endorsements.write();
@@ -476,12 +495,14 @@ impl Storage {
         if endorsements.is_empty() {
             return;
         }
-        let mut endo_store = self.endorsements.write();
-        let mut owners = self.endorsement_owners.write();
         let ids: PreHashSet<EndorsementId> = endorsements.iter().map(|op| op.id).collect();
-        for endorsement in endorsements {
-            endo_store.insert(endorsement);
+        {
+            let mut endo_store = self.endorsements.write();
+            for endorsement in endorsements {
+                endo_store.insert(endorsement);
+            }
         }
+        let mut owners = self.endorsement_owners.write();
         Storage::internal_claim_refs(&ids, &mut owners, &mut self.local_used_endorsements);
     }
 }
