@@ -50,6 +50,7 @@ use massa_pool_exports::PoolController;
 use massa_signature::KeyPair;
 use massa_storage::Storage;
 use massa_time::MassaTime;
+use tracing::info;
 use std::net::{IpAddr, SocketAddr};
 
 impl API<Public> {
@@ -813,14 +814,17 @@ impl Endpoints for API<Public> {
         let api_cfg = self.0.api_settings;
         let mut to_send = self.0.storage.clone_without_refs();
         let closure = async move || {
+            info!("TEST: Start manage operations");
             if ops.len() as u64 > api_cfg.max_arguments {
                 return Err(ApiError::TooManyArguments("too many arguments".into()));
             }
+            info!("TEST: Size checked");
             let operation_deserializer = WrappedDeserializer::new(OperationDeserializer::new(
                 api_cfg.max_datastore_value_length,
                 api_cfg.max_function_name_length,
                 api_cfg.max_parameter_size,
             ));
+            info!("TEST: Deserializer created");
             let verified_ops = ops
                 .into_iter()
                 .map(|op_input| {
@@ -834,8 +838,10 @@ impl Endpoints for API<Public> {
                             ApiError::ModelsError(ModelsError::DeserializeError(err.to_string()))
                         })?;
                     if rest.is_empty() {
+                        info!("TEST: All operations deserialized");
                         Ok(op)
                     } else {
+                        info!("TEST: Error operation deserialized");
                         Err(ApiError::ModelsError(ModelsError::DeserializeError(
                             "There is data left after operation deserialization".to_owned(),
                         )))
@@ -849,10 +855,14 @@ impl Endpoints for API<Public> {
                     Err(e) => Err(e),
                 })
                 .collect::<Result<Vec<WrappedOperation>, ApiError>>()?;
+            info!("TEST: All signatures verified");
             to_send.store_operations(verified_ops.clone());
+            info!("TEST: Operations in storage");
             let ids: Vec<OperationId> = verified_ops.iter().map(|op| op.id).collect();
             cmd_sender.add_operations(to_send.clone());
+            info!("TEST: Operations in pool");
             protocol_sender.propagate_operations(to_send).await?;
+            info!("TEST: Operations propagated");
             Ok(ids)
         };
         Box::pin(closure())

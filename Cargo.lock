@@ -2070,6 +2070,7 @@ dependencies = [
  "massa_signature",
  "massa_storage",
  "num",
+ "tracing",
 ]
 
 [[package]]

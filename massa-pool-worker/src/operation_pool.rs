@@ -11,7 +11,7 @@ use massa_models::{
 use massa_pool_exports::PoolConfig;
 use massa_storage::Storage;
 use std::collections::BTreeSet;
-
+use tracing::info;
 use crate::types::{OperationInfo, PoolOperationCursor};
 
 pub struct OperationPool {
@@ -105,13 +105,16 @@ impl OperationPool {
             .copied()
             .collect::<Vec<_>>();
 
+        info!("TEST: Operations in pool: {:#?}", &items.len());
         let mut added = PreHashSet::with_capacity(items.len());
         let mut removed = PreHashSet::with_capacity(items.len());
 
         // add items to pool
         {
             let ops = ops_storage.read_operations();
+            info!("TEST: Read storage");
             for op_id in items {
+                info!("TEST: Before operation info");
                 let op_info = OperationInfo::from_op(
                     ops.get(&op_id).expect(
                         "attempting to add operation to pool, but it is absent from storage",
@@ -120,10 +123,13 @@ impl OperationPool {
                     self.config.roll_price,
                     self.config.thread_count,
                 );
+                info!("TEST: After operation info");
                 if !self.is_operation_relevant(&op_info) {
                     continue;
                 }
+                info!("TEST: Operation relevant");
                 if let Ok(op_info) = self.operations.try_insert(op_info.id, op_info) {
+                    info!("TEST: Operation insert");
                     if !self.sorted_ops_per_thread[op_info.thread as usize].insert(op_info.cursor) {
                         panic!("sorted ops should not contain the op at this point");
                     }
@@ -133,6 +139,7 @@ impl OperationPool {
                     )) {
                         panic!("expiration indexed ops should not contain the op at this point");
                     }
+                    info!("TEST: End operation inserted");
                     added.insert(op_info.id);
                 }
             }
@@ -140,6 +147,7 @@ impl OperationPool {
 
         // prune excess operations
         self.sorted_ops_per_thread.iter_mut().for_each(|ops| {
+            info!("TEST: Start pruning");
             while ops.len() > self.config.max_operation_pool_size_per_thread {
                 // the unrap below won't panic because the loop condition tests for non-emptines of self.operations
                 let cursor = ops.pop_last().unwrap();
@@ -155,6 +163,7 @@ impl OperationPool {
                     removed.insert(op_info.id);
                 }
             }
+            info!("TEST: End pruning");
         });
 
         // take ownership on added ops
@@ -163,9 +172,12 @@ impl OperationPool {
             &added,
             &Default::default(),
         ));
+        info!("TEST: Storage extended");
+
 
         // drop removed ops from storage
         self.storage.drop_operation_refs(&removed);
+        info!("TEST: Storage drop");
     }
 
     /// get operations for block creation
