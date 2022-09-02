@@ -893,7 +893,7 @@ impl ExecutionState {
                     .into_iter()
                     .map(|op_id| {
                         ops.get(&op_id)
-                            .expect("block operation absent from storage")
+                            .expect(&format!("block id: {} operation id: {} absent from storage", &block_id, &op_id))
                             .clone()
                     })
                     .collect::<Vec<_>>()
