@@ -856,6 +856,7 @@ impl Endpoints for API<Public> {
                 })
                 .collect::<Result<Vec<WrappedOperation>, ApiError>>()?;
             info!("TEST: All signatures verified");
+            info!("TEST: Add {} operations to storage", verified_ops.len());
             to_send.store_operations(verified_ops.clone());
             info!("TEST: Operations in storage");
             let ids: Vec<OperationId> = verified_ops.iter().map(|op| op.id).collect();

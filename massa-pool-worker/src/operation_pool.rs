@@ -146,8 +146,8 @@ impl OperationPool {
         }
 
         // prune excess operations
+        info!("TEST: Start pruning");
         self.sorted_ops_per_thread.iter_mut().for_each(|ops| {
-            info!("TEST: Start pruning");
             while ops.len() > self.config.max_operation_pool_size_per_thread {
                 // the unrap below won't panic because the loop condition tests for non-emptines of self.operations
                 let cursor = ops.pop_last().unwrap();
@@ -163,8 +163,8 @@ impl OperationPool {
                     removed.insert(op_info.id);
                 }
             }
-            info!("TEST: End pruning");
         });
+        info!("TEST: End pruning");
 
         // take ownership on added ops
         self.storage.extend(ops_storage.split_off(
