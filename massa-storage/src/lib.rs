@@ -353,12 +353,14 @@ impl Storage {
             }
         }
         // if there are orphaned objects, remove them from storage
+        info!("TEST: BEFORE CLEAN ORPHANS size = {}", orphaned_ids.len());
         if !orphaned_ids.is_empty() {
             let mut ops = self.operations.write();
             for id in orphaned_ids {
                 ops.remove(&id);
             }
         }
+        info!("TEST: AFTER CLEAN ORPHANS");
     }
 
     /// Store operations
