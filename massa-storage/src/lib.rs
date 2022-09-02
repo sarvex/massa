@@ -28,6 +28,7 @@ use massa_models::{
 };
 use operation_indexes::OperationIndexes;
 use parking_lot::{RwLock, RwLockReadGuard, RwLockWriteGuard};
+use tracing::info;
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::{collections::hash_map, sync::Arc};
@@ -366,13 +367,21 @@ impl Storage {
         if operations.is_empty() {
             return;
         }
+        info!("TEST: After check empty");
         let mut op_store = self.operations.write();
+        info!("TEST: Acquire 1 lock");
+        info!("TEST: op_store size = {}", op_store.operations.len());
         let mut owners = self.operation_owners.write();
+        info!("TEST: op owner size = {}", owners.len());
+        info!("TEST: After 2 lock");
         let ids: PreHashSet<OperationId> = operations.iter().map(|op| op.id).collect();
+        info!("TEST: collect ids");
         for op in operations {
             op_store.insert(op);
         }
+        info!("TEST: After insert ids");
         Storage::internal_claim_refs(&ids, &mut owners, &mut self.local_used_ops);
+        info!("TEST: After claim ids");
     }
 
     /// Gets a read reference to the operations index
