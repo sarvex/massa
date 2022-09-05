@@ -120,6 +120,10 @@ impl TestFactory {
         );
         sleep(next_slot_instant.checked_sub(now).unwrap().to_duration());
         let producer_address = Address::from_public_key(&self.keypair.get_public_key());
+        let selection = Selection {
+            producer: producer_address,
+            endorsements: vec![producer_address; ENDORSEMENT_COUNT as usize],
+        };
         loop {
             match self
                 .selector_receiver
@@ -135,12 +139,8 @@ impl TestFactory {
                     slot: _,
                     response_tx,
                 }) => {
-                    response_tx
-                        .send(Ok(Selection {
-                            producer: producer_address,
-                            endorsements: vec![producer_address; ENDORSEMENT_COUNT as usize],
-                        }))
-                        .unwrap();
+                    dbg!("SELECTION IN");
+                    response_tx.send(Ok(selection.clone())).unwrap();
                 }
                 Err(_) => {
                     break;
@@ -149,21 +149,24 @@ impl TestFactory {
             }
         }
         loop {
-            match dbg!(self
+            match self
                 .consensus_controller
-                .consensus_command_rx
-                .blocking_recv())
-            {
-                Some(ConsensusCommand::GetBestParents { response_tx }) => {
-                    response_tx.send(self.genesis_blocks.clone()).unwrap();
-                }
-                Some(ConsensusCommand::GetBlockcliqueBlockAtSlot { response_tx, .. }) => {
-                    response_tx.send(None).unwrap();
-                }
+                .wait_command(MassaTime::from_millis(100), |cmd| match cmd {
+                    ConsensusCommand::GetBestParents { response_tx } => {
+                        response_tx.send(self.genesis_blocks.clone()).unwrap();
+                        Some(())
+                    }
+                    ConsensusCommand::GetBlockcliqueBlockAtSlot { response_tx, .. } => {
+                        response_tx.send(None).unwrap();
+                        Some(())
+                    }
+                    _ => panic!("unexpected message"),
+                }) {
+                Some(_) => continue,
                 None => break,
-                _ => panic!("unexpected message"),
             }
         }
+        dbg!("OUT");
         self.pool_receiver
             .wait_command(MassaTime::from_millis(100), |command| match command {
                 MockPoolControllerMessage::GetBlockEndorsements {
