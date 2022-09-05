@@ -129,14 +129,12 @@ impl TestFactory {
                     slot: _,
                     response_tx,
                 }) => {
-                    println!("test in receiver");
                     response_tx.send(Ok(producer_address)).unwrap();
                 }
                 Ok(MockSelectorControllerMessage::GetSelection {
                     slot: _,
                     response_tx,
                 }) => {
-                    println!("test in receiver2");
                     response_tx
                         .send(Ok(Selection {
                             producer: producer_address,
@@ -150,16 +148,21 @@ impl TestFactory {
                 _ => panic!("unexpected message"),
             }
         }
-        match self
-            .consensus_controller
-            .consensus_command_rx
-            .blocking_recv()
-            .unwrap()
-        {
-            ConsensusCommand::GetBestParents { response_tx } => {
-                response_tx.send(self.genesis_blocks.clone()).unwrap();
+        loop {
+            match dbg!(self
+                .consensus_controller
+                .consensus_command_rx
+                .blocking_recv())
+            {
+                Some(ConsensusCommand::GetBestParents { response_tx }) => {
+                    response_tx.send(self.genesis_blocks.clone()).unwrap();
+                }
+                Some(ConsensusCommand::GetBlockcliqueBlockAtSlot { response_tx, .. }) => {
+                    response_tx.send(None).unwrap();
+                }
+                None => break,
+                _ => panic!("unexpected message"),
             }
-            _ => panic!("unexpected message"),
         }
         self.pool_receiver
             .wait_command(MassaTime::from_millis(100), |command| match command {
@@ -203,11 +206,11 @@ impl TestFactory {
                 _ => panic!("unexpected message"),
             })
             .unwrap();
-        match self
+        match dbg!(self
             .consensus_controller
             .consensus_command_rx
             .blocking_recv()
-            .unwrap()
+            .unwrap())
         {
             ConsensusCommand::SendBlock {
                 block_id,
