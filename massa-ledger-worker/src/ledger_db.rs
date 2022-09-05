@@ -523,7 +523,7 @@ impl LedgerDB {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "testing"))]
 mod tests {
     use super::LedgerDB;
     use crate::ledger_db::LedgerSubEntry;
@@ -539,7 +539,6 @@ mod tests {
     use std::ops::Bound::Included;
     use tempfile::TempDir;
 
-    #[cfg(test)]
     fn init_test_ledger(addr: Address) -> (LedgerDB, BTreeMap<Vec<u8>, Vec<u8>>) {
         // init data
         let mut data = BTreeMap::new();
