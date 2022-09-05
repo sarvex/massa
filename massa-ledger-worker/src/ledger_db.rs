@@ -496,7 +496,7 @@ impl LedgerDB {
     ///
     /// # Returns
     /// A BTreeMap with the entry hash as key and the data bytes as value
-    #[cfg(feature = "testing")]
+    #[cfg(any(test, feature = "testing"))]
     pub fn get_entire_datastore(
         &self,
         addr: &Address,
@@ -523,7 +523,7 @@ impl LedgerDB {
     }
 }
 
-#[cfg(any(test, feature = "testing"))]
+#[cfg(test)]
 mod tests {
     use super::LedgerDB;
     use crate::ledger_db::LedgerSubEntry;

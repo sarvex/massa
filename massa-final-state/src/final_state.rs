@@ -202,14 +202,12 @@ impl FinalState {
 
 #[cfg(test)]
 mod tests {
-
-    use std::collections::VecDeque;
-
     use crate::StateChanges;
     use massa_async_pool::test_exports::get_random_message;
     use massa_ledger_exports::SetUpdateOrDelete;
     use massa_models::{address::Address, slot::Slot};
     use massa_signature::KeyPair;
+    use std::collections::VecDeque;
 
     fn get_random_address() -> Address {
         let keypair = KeyPair::generate();
