@@ -161,7 +161,12 @@ impl TestFactory {
                         Some(())
                     }
                     _ => panic!("unexpected message"),
-                }) {
+                // can't call an async function here either:
+                // * work around the async function
+                // * work around the endorsement factory usage (not great since we will have to test it at some point)
+                // * mock consensus sender and event handler
+                // * re-think this function behaviour
+                }).await {
                 Some(_) => continue,
                 None => break,
             }
