@@ -20,6 +20,7 @@ pub struct PoolEventReceiver(pub Receiver<MockPoolControllerMessage>);
 /// Each variant corresponds to a unique method in `PoolController`,
 /// Some variants wait for a response on their `response_tx` field, if present.
 /// See the documentation of `PoolController` for details on parameters and return values.
+#[derive(Debug)]
 pub enum MockPoolControllerMessage {
     /// Add endorsements to the pool
     AddEndorsements {
@@ -90,15 +91,15 @@ pub enum MockPoolControllerMessage {
 /// For messages with a `response_tx` field, the mock will await a response through their `response_tx` channel
 /// in order to simulate returning this value at the end of the call.
 #[derive(Clone)]
-pub struct MockPoolController(Arc<Mutex<mpsc::Sender<MockPoolControllerMessage>>>);
+pub struct MockPoolController(pub Arc<Mutex<mpsc::Sender<MockPoolControllerMessage>>>);
 
 impl MockPoolController {
     /// Create a new pair (mock execution controller, mpsc receiver for emitted messages)
     /// Note that unbounded mpsc channels are used
-    pub fn new_with_receiver() -> (Box<dyn PoolController>, PoolEventReceiver) {
+    pub fn new_with_receiver() -> (MockPoolController, PoolEventReceiver) {
         let (tx, rx) = mpsc::channel();
         (
-            Box::new(MockPoolController(Arc::new(Mutex::new(tx)))),
+            MockPoolController(Arc::new(Mutex::new(tx))),
             PoolEventReceiver(rx),
         )
     }

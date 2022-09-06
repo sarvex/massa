@@ -4,8 +4,11 @@ use std::{
     thread::sleep,
     time::Duration,
 };
+use tokio::sync::mpsc::error::TryRecvError;
 
-use massa_consensus_exports::{commands::ConsensusCommand, test_exports::MockConsensusController};
+use massa_consensus_exports::{
+    commands::ConsensusCommand, test_exports::MockConsensusController, ConsensusCommandSender,
+};
 use massa_factory_exports::{
     test_exports::create_empty_block, FactoryChannels, FactoryConfig, FactoryManager,
 };
@@ -35,6 +38,8 @@ use massa_wallet::test_exports::create_test_wallet;
 /// Then you can use the method `get_next_created_block` that will manage the answers from the mock to the factory depending on the parameters you gave.
 pub struct TestFactory {
     consensus_controller: MockConsensusController,
+    consensus_command_sender: ConsensusCommandSender,
+    pool_controller: MockPoolController,
     pool_receiver: PoolEventReceiver,
     selector_receiver: Receiver<MockSelectorControllerMessage>,
     factory_config: FactoryConfig,
@@ -82,8 +87,8 @@ impl TestFactory {
             Arc::new(RwLock::new(create_test_wallet(Some(accounts)))),
             FactoryChannels {
                 selector: selector_controller.clone(),
-                consensus: consensus_command_sender,
-                pool: pool_controller.clone(),
+                consensus: consensus_command_sender.clone(),
+                pool: Box::new(pool_controller.clone()),
                 protocol: protocol_command_sender.clone(),
                 storage: storage.clone_without_refs(),
             },
@@ -91,6 +96,8 @@ impl TestFactory {
 
         TestFactory {
             consensus_controller,
+            consensus_command_sender,
+            pool_controller,
             pool_receiver,
             selector_receiver,
             factory_config,
@@ -139,7 +146,6 @@ impl TestFactory {
                     slot: _,
                     response_tx,
                 }) => {
-                    dbg!("SELECTION IN");
                     response_tx.send(Ok(selection.clone())).unwrap();
                 }
                 Err(_) => {
@@ -149,76 +155,74 @@ impl TestFactory {
             }
         }
         loop {
-            match self
-                .consensus_controller
-                .wait_command(MassaTime::from_millis(100), |cmd| match cmd {
-                    ConsensusCommand::GetBestParents { response_tx } => {
-                        response_tx.send(self.genesis_blocks.clone()).unwrap();
-                        Some(())
-                    }
-                    ConsensusCommand::GetBlockcliqueBlockAtSlot { response_tx, .. } => {
-                        response_tx.send(None).unwrap();
-                        Some(())
-                    }
-                    _ => panic!("unexpected message"),
-                // can't call an async function here either:
-                // * work around the async function
-                // * work around the endorsement factory usage (not great since we will have to test it at some point)
-                // * mock consensus sender and event handler
-                // * re-think this function behaviour
-                }).await {
-                Some(_) => continue,
-                None => break,
+            sleep(Duration::from_millis(100));
+            match self.consensus_controller.consensus_command_rx.try_recv() {
+                Ok(ConsensusCommand::GetBestParents { response_tx }) => {
+                    response_tx.send(self.genesis_blocks.clone()).unwrap();
+                }
+                Ok(ConsensusCommand::GetBlockcliqueBlockAtSlot { response_tx, .. }) => {
+                    response_tx
+                        .send(Some(self.genesis_blocks.first().unwrap().0))
+                        .unwrap();
+                }
+                Err(TryRecvError::Empty) => {
+                    break;
+                }
+                Err(TryRecvError::Disconnected) => {
+                    panic!("disconnected");
+                }
+                _ => panic!("unexpected message"),
             }
         }
-        dbg!("OUT");
-        self.pool_receiver
-            .wait_command(MassaTime::from_millis(100), |command| match command {
-                MockPoolControllerMessage::GetBlockEndorsements {
-                    block_id: _,
-                    slot: _,
-                    response_tx,
-                } => {
-                    if let Some(endorsements) = &endorsements {
-                        let ids = endorsements.iter().map(|endo| Some(endo.id)).collect();
-                        let mut storage = self.storage.clone_without_refs();
-                        storage.store_endorsements(endorsements.clone());
-                        response_tx.send((ids, self.storage.clone())).unwrap();
-                        Some(())
-                    } else {
-                        response_tx.send((vec![], Storage::create_root())).unwrap();
-                        Some(())
+        loop {
+            match self
+                .pool_receiver
+                .wait_command(MassaTime::from_millis(100), |command| match command {
+                    MockPoolControllerMessage::GetBlockOperations {
+                        slot: _,
+                        response_tx,
+                    } => {
+                        if let Some(operations) = &operations {
+                            let ids = operations.iter().map(|op| op.id).collect();
+                            let mut storage = self.storage.clone_without_refs();
+                            storage.store_operations(operations.clone());
+                            response_tx.send((ids, storage.clone())).unwrap();
+                            Some(())
+                        } else {
+                            response_tx.send((vec![], Storage::create_root())).unwrap();
+                            Some(())
+                        }
                     }
-                }
-                _ => panic!("unexpected message"),
-            })
-            .unwrap();
-
-        self.pool_receiver
-            .wait_command(MassaTime::from_millis(100), |command| match command {
-                MockPoolControllerMessage::GetBlockOperations {
-                    slot: _,
-                    response_tx,
-                } => {
-                    if let Some(operations) = &operations {
-                        let ids = operations.iter().map(|op| op.id).collect();
-                        let mut storage = self.storage.clone_without_refs();
-                        storage.store_operations(operations.clone());
-                        response_tx.send((ids, storage.clone())).unwrap();
-                        Some(())
-                    } else {
-                        response_tx.send((vec![], Storage::create_root())).unwrap();
-                        Some(())
+                    MockPoolControllerMessage::AddEndorsements { endorsements: _ } => Some(()),
+                    MockPoolControllerMessage::GetBlockEndorsements {
+                        block_id: _,
+                        slot: _,
+                        response_tx,
+                    } => {
+                        if let Some(endorsements) = &endorsements {
+                            let ids = endorsements.iter().map(|endo| Some(endo.id)).collect();
+                            let mut storage = self.storage.clone_without_refs();
+                            storage.store_endorsements(endorsements.clone());
+                            response_tx.send((ids, self.storage.clone())).unwrap();
+                            Some(())
+                        } else {
+                            response_tx.send((vec![], Storage::create_root())).unwrap();
+                            Some(())
+                        }
                     }
+                    _ => panic!("unexpected message"),
+                }) {
+                Some(_) => continue,
+                None => {
+                    break;
                 }
-                _ => panic!("unexpected message"),
-            })
-            .unwrap();
-        match dbg!(self
+            };
+        }
+        match self
             .consensus_controller
             .consensus_command_rx
             .blocking_recv()
-            .unwrap())
+            .unwrap()
         {
             ConsensusCommand::SendBlock {
                 block_id,
@@ -236,6 +240,9 @@ impl TestFactory {
 
 impl Drop for TestFactory {
     fn drop(&mut self) {
+        self.consensus_controller.consensus_command_rx.close();
+        std::mem::drop(&self.consensus_command_sender);
+        std::mem::drop(&self.pool_controller);
         self.factory_manager.stop();
     }
 }

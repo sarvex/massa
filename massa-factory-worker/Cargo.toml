@@ -33,6 +33,7 @@ massa_wallet = { path = "../massa-wallet", features=["testing"]  }
 massa_pos_exports = { path = "../massa-pos-exports", features=["testing"]  }
 massa_consensus_exports = { path = "../massa-consensus-exports", features=["testing"]  }
 massa_pool_exports = { path = "../massa-pool-exports", features=["testing"]  }
+tokio = { version = "1.21", features = ["full"] }
 
 [features]
 sandbox = []

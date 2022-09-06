@@ -13,7 +13,6 @@ fn basic_creation() {
     let keypair = KeyPair::generate();
     let mut test_factory = TestFactory::new(&keypair);
     let (block_id, storage) = test_factory.get_next_created_block(None, None);
-    dbg!("AFTER");
     let id = storage.read_blocks().get(&block_id).unwrap().id;
     assert_eq!(block_id, id);
 }

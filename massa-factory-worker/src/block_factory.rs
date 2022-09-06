@@ -251,7 +251,7 @@ impl BlockFactoryWorker {
         loop {
             // get next slot
             let (slot, block_instant) = self.get_next_slot(prev_slot);
-
+            println!("block slot: {:#?}", slot);
             // wait until slot
             if !self.interruptible_wait_until(block_instant) {
                 break;

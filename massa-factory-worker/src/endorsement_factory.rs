@@ -215,7 +215,7 @@ impl EndorsementFactoryWorker {
         loop {
             // get next slot
             let (slot, endorsement_instant) = self.get_next_slot(prev_slot);
-
+            println!("endorsement slot: {:#?}", slot);
             // wait until slot
             if !self.interruptible_wait_until(endorsement_instant) {
                 break;
