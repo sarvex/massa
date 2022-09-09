@@ -84,10 +84,13 @@ impl BootstrapableGraphDeserializer {
         thread_count: u8,
         endorsement_count: u32,
         max_bootstrap_blocks: u32,
-        max_datastore_value_length: u64,
+        max_data_value_length: u64,
         max_function_name_length: u16,
         max_parameters_size: u32,
         max_operations_per_block: u32,
+        max_datastore_entry_count: u64,
+        max_datastore_key_length: u8,
+        max_datastore_value_length: u64,
     ) -> Self {
         Self {
             block_count_deserializer: U32VarIntDeserializer::new(
@@ -98,9 +101,12 @@ impl BootstrapableGraphDeserializer {
                 thread_count,
                 endorsement_count,
                 max_operations_per_block,
-                max_datastore_value_length,
+                max_data_value_length,
                 max_function_name_length,
                 max_parameters_size,
+                max_datastore_entry_count,
+                max_datastore_key_length,
+                max_datastore_value_length,
             ),
         }
     }

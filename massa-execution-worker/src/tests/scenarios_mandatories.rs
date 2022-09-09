@@ -28,6 +28,7 @@ use massa_storage::Storage;
 use parking_lot::RwLock;
 use serial_test::serial;
 use std::{cmp::Reverse, collections::HashMap, str::FromStr, sync::Arc, time::Duration};
+use std::collections::BTreeMap;
 use tempfile::{NamedTempFile, TempDir};
 
 use super::mock::get_initials;
@@ -614,6 +615,7 @@ fn create_execute_sc_operation(
         max_gas: 100_000,
         coins: Amount::from_str("10").unwrap(),
         gas_price: Amount::from_mantissa_scale(1, 0),
+        datastore: BTreeMap::new()
     };
     let op = Operation::new_wrapped(
         Operation {

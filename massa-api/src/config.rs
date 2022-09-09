@@ -15,10 +15,14 @@ pub struct APIConfig {
     pub bind_public: SocketAddr,
     /// max argument count
     pub max_arguments: u64,
-    /// max datastore value length
-    pub max_datastore_value_length: u64,
+    /// max data value length
+    pub max_data_value_length: u64,
     /// max function name length
     pub max_function_name_length: u16,
     /// max parameter size
     pub max_parameter_size: u32,
+    /// datastore
+    pub max_datastore_entry_count: u64,
+    pub max_datastore_key_length: u8,
+    pub max_datastore_value_lenght: u64,
 }

@@ -275,9 +275,12 @@ impl MessageDeserializer {
         max_operations_per_block: u32,
         max_operations_per_message: u32,
         max_endorsements_per_message: u32,
-        max_datastore_value_length: u64,
+        max_data_value_length: u64,
         max_function_name_length: u16,
         max_parameters_size: u32,
+        max_datastore_entry_count: u64,
+        max_datastore_key_length: u8,
+        max_datastore_value_length: u64,
     ) -> Self {
         MessageDeserializer {
             public_key_deserializer: PublicKeyDeserializer::new(),
@@ -297,6 +300,9 @@ impl MessageDeserializer {
                 max_datastore_value_length,
                 max_function_name_length,
                 max_parameters_size,
+                max_datastore_entry_count,
+                max_datastore_key_length,
+                max_datastore_value_length
             ),
             hash_deserializer: HashDeserializer::new(),
             block_header_deserializer: WrappedDeserializer::new(BlockHeaderDeserializer::new(

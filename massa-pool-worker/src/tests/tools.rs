@@ -1,5 +1,6 @@
 // Copyright (c) 2022 MASSA LABS <info@massa.net>
 
+use std::collections::BTreeMap;
 use crate::{operation_pool::OperationPool, start_pool};
 use massa_execution_exports::test_exports::{
     MockExecutionController, MockExecutionControllerMessage,
@@ -136,6 +137,8 @@ pub fn _create_executesc(
         max_gas,
         coins: Amount::from_str(&coins.to_string()).unwrap(),
         gas_price: Amount::from_str(&gas_price.to_string()).unwrap(),
+        // TODO/FIXME
+        datastore: BTreeMap::new()
     };
 
     let content = Operation {

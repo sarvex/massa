@@ -198,9 +198,12 @@ impl ExportActiveBlockDeserializer {
         thread_count: u8,
         endorsement_count: u32,
         max_operations_per_block: u32,
-        max_datastore_value_length: u64,
+        max_data_value_length: u64,
         max_function_name_length: u16,
         max_parameters_size: u32,
+        max_datastore_entry_count: u64,
+        max_datastore_key_length: u8,
+        max_datastore_value_length: u64,
     ) -> Self {
         ExportActiveBlockDeserializer {
             wrapped_block_deserializer: WrappedDeserializer::new(BlockDeserializer::new(
@@ -209,9 +212,12 @@ impl ExportActiveBlockDeserializer {
                 endorsement_count,
             )),
             wrapped_operation_deserializer: WrappedDeserializer::new(OperationDeserializer::new(
-                max_datastore_value_length,
+                max_data_value_length,
                 max_function_name_length,
                 max_parameters_size,
+                max_datastore_entry_count,
+                max_datastore_key_length,
+                max_datastore_value_length,
             )),
             operation_count_serializer: U32VarIntDeserializer::new(
                 Included(0),
