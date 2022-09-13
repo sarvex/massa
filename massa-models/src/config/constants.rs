@@ -124,6 +124,8 @@ pub const MAX_LEDGER_CHANGES_COUNT: u64 =
     100_u32.saturating_mul(MAX_LEDGER_CHANGES_PER_SLOT) as u64;
 /// Maximum number of key/values in the datastore of a ledger entry
 pub const MAX_DATASTORE_ENTRY_COUNT: u64 = u64::MAX;
+/// Cost to store one byte in the ledger
+pub const LEDGER_COST_PER_BYTE: Amount = Amount::from_mantissa_scale(2, 4);
 /// Maximum length function name in call sc
 pub const MAX_FUNCTION_NAME_LENGTH: u16 = u16::MAX;
 /// Maximum size of parameters in call sc
