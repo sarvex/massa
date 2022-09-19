@@ -370,6 +370,7 @@ impl ProtocolWorker {
                 .map(|(_, op)| op)
                 .collect::<Vec<_>>();
             if !to_send.is_empty() {
+                info!("sending {} endorsements to {}", to_send.len(), node);
                 let res = self
                     .network_command_sender
                     .send_endorsements(*node, to_send)
