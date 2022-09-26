@@ -13,7 +13,7 @@ use massa_models::{
     slot::{Slot, SlotDeserializer},
 };
 use massa_serialization::U64VarIntDeserializer;
-use tracing::debug;
+use tracing::{debug, log::warn};
 
 use crate::{
     CycleInfo, PoSChanges, PoSFinalState, PosError, PosResult, ProductionStats, SelectorController,
@@ -171,6 +171,12 @@ impl PoSFinalState {
         // pop_front from cycle_history until front() represents cycle C-4 or later
         // (not C-3 because we might need older endorsement draws on the limit between 2 cycles)
         if let Some(info) = self.cycle_history.back() {
+            warn!(
+                "[changes bootstrap] last cycle: {} | expected cycle: {} | received cycle (from given slot): {}",
+                info.cycle,
+                info.cycle.saturating_add(1),
+                cycle,
+            );
             if cycle == info.cycle && !info.complete {
                 // extend the last incomplete cycle
             } else if info.cycle.checked_add(1) == Some(cycle) && info.complete {
@@ -221,6 +227,10 @@ impl PoSFinalState {
 
             // check for completion
             current.complete = slot.is_last_of_cycle(self.periods_per_cycle, self.thread_count);
+            warn!(
+                "[changes bootstrap] received cycle completion: {}",
+                current.complete
+            );
             // if the cycle just completed, check that it has the right number of seed bits
             if current.complete && current.rng_seed.len() != slots_per_cycle {
                 panic!("cycle completed with incorrect number of seed bits");

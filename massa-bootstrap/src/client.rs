@@ -77,6 +77,7 @@ async fn stream_final_state(
                     let last_cycle_step = write_final_state
                         .pos_state
                         .set_cycle_history_part(pos_cycle_part.as_bytes())?;
+                    warn!("[main bootstrap] streaming step: {:?}", last_cycle_step);
                     let last_credits_slot = write_final_state
                         .pos_state
                         .set_deferred_credits_part(pos_credits_part.as_bytes())?;
@@ -91,11 +92,15 @@ async fn stream_final_state(
                         write_final_state
                             .async_pool
                             .apply_changes_unchecked(&changes.async_pool_changes);
-                        write_final_state.pos_state.apply_changes(
-                            changes.pos_changes.clone(),
-                            *changes_slot,
-                            false,
-                        )?;
+                        if last_cycle_step == PoSCycleStreamingStep::Finished {
+                            write_final_state.pos_state.apply_changes(
+                                changes.pos_changes.clone(),
+                                *changes_slot,
+                                false,
+                            )?;
+                        } else {
+                            warn!("[main bootstrap] trying to apply PoS changes on an unfinished bootstrap");
+                        }
                         write_final_state
                             .executed_ops
                             .extend(changes.executed_ops.clone());
