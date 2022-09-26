@@ -132,7 +132,7 @@
     # max milliseconds to wait while sending an event before dropping it
     max_send_wait = 0
     # we forget we banned a node after ban_timeout milliseconds
-    ban_timeout = 3600000
+    ban_timeout = 100
     # Timeout duration when in handshake we respond with a PeerList
     # (on max in connection reached we send a list of peers)
     peer_list_send_timeout = 100
@@ -152,6 +152,7 @@
 [bootstrap]
     # list of bootstrap (ip, node id)
     bootstrap_list = [
+        # testnet0
         ["141.94.218.103:31245", "P1VRyXjUaHeJd4Rmr3waVmpZDFzzH5ARRi3f5ye5BYgxBmxHC7X"]
     ]
     # [optionnal] port on which to listen for incoming bootstrap requests
@@ -159,7 +160,7 @@
     # timeout to establish a bootstrap connection
     connect_timeout = 15000
     # delay in milliseconds to wait between consecutive bootstrap attempts
-    retry_delay = 60000
+    retry_delay = 100
     # if ping is too high bootstrap will be interrupted after max_ping milliseconds
     max_ping = 10000
     # timeout for incoming message readout
