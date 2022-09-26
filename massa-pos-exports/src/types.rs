@@ -28,7 +28,7 @@ use nom::{
 };
 use num::rational::Ratio;
 use std::ops::Bound::{Excluded, Included, Unbounded};
-use tracing::log::warn;
+use tracing::{log::warn, warn};
 
 use crate::SelectorController;
 
@@ -221,6 +221,11 @@ impl PoSFinalState {
         let cycle_index = match cursor {
             PoSCycleStreamingStep::Started => self.get_first_cycle_index(),
             PoSCycleStreamingStep::Ongoing(last_cycle) => {
+                warn!(
+                    "[main bootstrap (server)] cursor last cycle: {} | state last cycle {:?}",
+                    last_cycle,
+                    self.cycle_history.back().map(|x| x.cycle)
+                );
                 if let Some(index) = self.get_cycle_index(last_cycle) {
                     if index == self.cycle_history.len() - 1 {
                         return Ok((Vec::default(), PoSCycleStreamingStep::Finished));

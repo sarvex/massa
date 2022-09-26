@@ -318,6 +318,11 @@ pub async fn send_final_state_stream(
                 .pos_state
                 .get_cycle_history_part(last_cycle_step)?;
             pos_cycle_data = cycle_data;
+            warn!(
+                "[main bootstrap (server)] last streaming step: {:?} | new streaming step: {:?}",
+                last_cycle_step
+                new_cycle_step
+            );
 
             let (credits_data, new_last_credits_slot) = final_state_read
                 .pos_state
@@ -354,6 +359,14 @@ pub async fn send_final_state_stream(
             } else {
                 final_state_changes = Vec::new();
             }
+            warn!(
+                "[changes bootstrap (server)] pos_changes = {}",
+                final_state_changes
+                    .iter()
+                    .map(|(_a, b)| b.pos_changes.clone())
+                    .collect::<Vec<_>>()
+                    .len()
+            );
 
             // Assign value for next turn
             if new_last_key.is_some() || !ledger_data.is_empty() {
