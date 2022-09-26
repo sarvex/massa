@@ -89,18 +89,18 @@ async fn stream_final_state(
                         write_final_state
                             .ledger
                             .apply_changes(changes.ledger_changes.clone(), *changes_slot);
-                        write_final_state
-                            .async_pool
-                            .apply_changes_unchecked(&changes.async_pool_changes);
-                        if last_cycle_step == PoSCycleStreamingStep::Finished {
-                            write_final_state.pos_state.apply_changes(
-                                changes.pos_changes.clone(),
-                                *changes_slot,
-                                false,
-                            )?;
+                        if changes.pos_changes.is_empty() {
+                            write_final_state
+                                .async_pool
+                                .apply_changes_unchecked(&changes.async_pool_changes);
                         } else {
-                            warn!("(main bootstrap) trying to apply PoS changes on an unfinished bootstrap");
+                            warn!("(changes bootstrap) trying to apply empty PoS changes")
                         }
+                        write_final_state.pos_state.apply_changes(
+                            changes.pos_changes.clone(),
+                            *changes_slot,
+                            false,
+                        )?;
                         write_final_state
                             .executed_ops
                             .extend(changes.executed_ops.clone());
