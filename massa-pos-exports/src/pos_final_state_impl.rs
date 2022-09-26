@@ -172,7 +172,7 @@ impl PoSFinalState {
         // (not C-3 because we might need older endorsement draws on the limit between 2 cycles)
         if let Some(info) = self.cycle_history.back() {
             warn!(
-                "(changes bootstrap) last cycle: {} | expected cycle: {} | received cycle (from given slot): {}",
+                "(changes bootstrap (pos apply_changes)) last cycle: {} | expected cycle: {} | received cycle (from given slot): {}",
                 info.cycle,
                 info.cycle.saturating_add(1),
                 cycle,
@@ -228,7 +228,7 @@ impl PoSFinalState {
             // check for completion
             current.complete = slot.is_last_of_cycle(self.periods_per_cycle, self.thread_count);
             warn!(
-                "(changes bootstrap) received cycle completion: {}",
+                "(changes bootstrap (pos apply_changes)) received cycle completion: {}",
                 current.complete
             );
             // if the cycle just completed, check that it has the right number of seed bits
