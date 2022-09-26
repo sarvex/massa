@@ -320,8 +320,7 @@ pub async fn send_final_state_stream(
             pos_cycle_data = cycle_data;
             warn!(
                 "[main bootstrap (server)] last streaming step: {:?} | new streaming step: {:?}",
-                last_cycle_step
-                new_cycle_step
+                last_cycle_step, new_cycle_step
             );
 
             let (credits_data, new_last_credits_slot) = final_state_read
