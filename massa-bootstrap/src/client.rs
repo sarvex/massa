@@ -77,7 +77,7 @@ async fn stream_final_state(
                     let last_cycle_step = write_final_state
                         .pos_state
                         .set_cycle_history_part(pos_cycle_part.as_bytes())?;
-                    warn!("[main bootstrap] streaming step: {:?}", last_cycle_step);
+                    warn!("(main bootstrap) streaming step: {:?}", last_cycle_step);
                     let last_credits_slot = write_final_state
                         .pos_state
                         .set_deferred_credits_part(pos_credits_part.as_bytes())?;
@@ -99,7 +99,7 @@ async fn stream_final_state(
                                 false,
                             )?;
                         } else {
-                            warn!("[main bootstrap] trying to apply PoS changes on an unfinished bootstrap");
+                            warn!("(main bootstrap) trying to apply PoS changes on an unfinished bootstrap");
                         }
                         write_final_state
                             .executed_ops

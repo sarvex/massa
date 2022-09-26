@@ -319,7 +319,7 @@ pub async fn send_final_state_stream(
                 .get_cycle_history_part(last_cycle_step)?;
             pos_cycle_data = cycle_data;
             warn!(
-                "[main bootstrap (server)] last streaming step: {:?} | new streaming step: {:?}",
+                "(main bootstrap (server)) last streaming step: {:?} | new streaming step: {:?}",
                 last_cycle_step, new_cycle_step
             );
 

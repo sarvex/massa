@@ -222,7 +222,7 @@ impl PoSFinalState {
             PoSCycleStreamingStep::Started => self.get_first_cycle_index(),
             PoSCycleStreamingStep::Ongoing(last_cycle) => {
                 warn!(
-                    "[main bootstrap (server)] cursor last cycle: {} | state last cycle {:?}",
+                    "(main bootstrap (server)) cursor last cycle: {} | state last cycle {:?}",
                     last_cycle,
                     self.cycle_history.back().map(|x| x.cycle)
                 );
@@ -405,11 +405,11 @@ impl PoSFinalState {
             info.roll_counts.extend(cycle.2);
             info.rng_seed.extend(cycle.3);
             info.production_stats.extend(stats_iter);
-            warn!("[main bootstrap] extend of an incomplete cycle")
+            warn!("(main bootstrap) extend of an incomplete cycle")
         } else {
             let opt_next_cycle = self.cycle_history.back().map(|info| info.cycle.saturating_add(1));
             warn!(
-                "[main bootstrap] last cycle: {:?} | expected cycle: {:?} | received cycle: {} | received cyle completion: {}",
+                "(main bootstrap) last cycle: {:?} | expected cycle: {:?} | received cycle: {} | received cyle completion: {}",
                 self.cycle_history.back().map(|info| info.cycle),
                 opt_next_cycle,
                 cycle.0,

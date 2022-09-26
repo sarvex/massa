@@ -153,7 +153,7 @@
     # list of bootstrap (ip, node id)
     bootstrap_list = [
         # testnet0
-        ["141.94.218.103:31245", "P1VRyXjUaHeJd4Rmr3waVmpZDFzzH5ARRi3f5ye5BYgxBmxHC7X"]
+        # ["141.94.218.103:31245", "P1VRyXjUaHeJd4Rmr3waVmpZDFzzH5ARRi3f5ye5BYgxBmxHC7X"]
     ]
     # [optionnal] port on which to listen for incoming bootstrap requests
     bind = "[::]:31245"
