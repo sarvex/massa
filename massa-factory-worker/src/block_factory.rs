@@ -203,7 +203,7 @@ impl BlockFactoryWorker {
         );
 
         // create header
-        let header: WrappedHeader = BlockHeader::new_wrapped::<BlockHeaderSerializer2, BlockId>(
+        let header_ = BlockHeader::new_wrapped::<BlockHeaderSerializer2, BlockId>(
             BlockHeader {
                 slot,
                 parents: parents.into_iter().map(|(id, _period)| id).collect(),
@@ -212,9 +212,10 @@ impl BlockFactoryWorker {
             },
             BlockHeaderSerializer2::new(), // TODO reuse self.block_header_serializer
             block_producer_keypair,
-        )
-        .expect("error while producing block header");
-        debug!("header: {:?}", header);
+        );
+
+        debug!("header_: {:?}", header_);
+        let header = header_.expect("error while producing block header");
 
         // create block
         let block = Block::new_wrapped(

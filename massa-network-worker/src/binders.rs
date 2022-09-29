@@ -14,7 +14,7 @@ use massa_serialization::Serializer;
 use massa_serialization::{DeserializeError, Deserializer};
 use std::convert::TryInto;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tracing::warn;
+use tracing::{warn, debug};
 
 /// Used to serialize and send data.
 pub struct WriteBinder {
@@ -44,7 +44,8 @@ impl WriteBinder {
     pub async fn send(&mut self, msg: &Message) -> Result<u64, NetworkError> {
         //        massa_trace!("binder.send", { "msg": msg });
         let mut buf = Vec::new();
-        MessageSerializer::new().serialize(msg, &mut buf)?;
+        let ser_ = MessageSerializer::new().serialize(msg, &mut buf);
+        debug!("msg ser result: {:?}", ser_);
         let msg_size: u32 = buf
             .len()
             .try_into()
@@ -174,9 +175,10 @@ impl ReadBinder {
             .message_deserializer
             .deserialize::<DeserializeError>(&self.buf)
             .map_err(|err| {
-                warn!("error deserializing message: {:?}", err);
+                debug!("error deserializing message: {:?}", err);
                 NetworkError::ModelsError(ModelsError::DeserializeError(err.to_string()))
             })?;
+        debug!("res_msg: {:?}", res_msg);
 
         // now the message readout is over, we reset the state to start reading the next message's size field again at the next run
         self.cursor = 0;
