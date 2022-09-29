@@ -29,7 +29,7 @@ use std::fmt::Formatter;
 use std::ops::Bound::{Excluded, Included};
 use std::str::FromStr;
 use tracing::debug;
-use crate::endorsement::EndorsementSerializerLW;
+use crate::endorsement::{EndorsementId, EndorsementSerializer, EndorsementSerializerLW};
 
 /// Size in bytes of a serialized block ID
 const BLOCK_ID_SIZE_BYTES: usize = massa_hash::HASH_SIZE_BYTES;
@@ -719,12 +719,40 @@ impl Deserializer<BlockHeader> for BlockHeaderDeserializer {
             // So we need to update the endorsements here with these info
             let r: Result<Vec<()>, &str> = endorsements
                 .iter_mut()
-                .map(|e| {
+                .map(|e: &mut WrappedEndorsement| {
                     e.content.slot = slot;
                     let idx_ = e.content.index;
                     let idx = usize::try_from(idx_).map_err(|_| "Index conversion fail")?;
                     let parent: Option<&BlockId> = parents.get(idx);
                     e.content.endorsed_block = *parent.ok_or("Unable to find parent")?;
+
+                    // We need to update the hash otherwise verification will fail
+                    let mut hash_data = Vec::new();
+                    hash_data.extend(e.creator_public_key.to_bytes());
+                    let mut buffer_ = Vec::new();
+                    EndorsementSerializer::new()
+                        .serialize(&e.content, &mut buffer_)
+                        .map_err(|_| "Unable to ser again")?;
+                    hash_data.extend(buffer_.clone());
+                    let hash_full = Hash::compute_from(&hash_data);
+
+                    /*
+                    let mut hash_data = Vec::new();
+                    hash_data.extend(e.creator_public_key.to_bytes());
+                    let mut buffer_ = Vec::new();
+                    EndorsementSerializerLW::new()
+                        .serialize(&e.content, &mut buffer_)
+                        .map_err(|_| "Unable to ser again")?;
+                    hash_data.extend(buffer_);
+                    let hash_light = Hash::compute_from(&hash_data);
+                    */
+
+                    if *e.id.get_hash() == hash_full {
+                        e.serialized_data = buffer_;
+                        // e.id = EndorsementId::new(hash_full);
+                    }
+
+
                     Ok::<(), &str>(())
                 })
                 .collect();
