@@ -29,6 +29,7 @@ use std::fmt::Formatter;
 use std::ops::Bound::{Excluded, Included};
 use std::str::FromStr;
 use tracing::debug;
+use crate::endorsement::EndorsementSerializerLW;
 
 /// Size in bytes of a serialized block ID
 const BLOCK_ID_SIZE_BYTES: usize = massa_hash::HASH_SIZE_BYTES;
@@ -520,6 +521,72 @@ impl Serializer<BlockHeader> for BlockHeaderSerializer {
         )?;
         for endorsement in value.endorsements.iter() {
             self.endorsement_serializer.serialize(endorsement, buffer)?;
+        }
+        Ok(())
+    }
+}
+
+/// Serializer 2 for `BlockHeader`
+pub struct BlockHeaderSerializer2 {
+    slot_serializer: SlotSerializer,
+    endorsement_serializer: WrappedSerializer,
+    u32_serializer: U32VarIntSerializer,
+}
+
+impl BlockHeaderSerializer2 {
+    /// Creates a new `BlockHeaderSerializer2`
+    pub fn new() -> Self {
+        Self {
+            slot_serializer: SlotSerializer::new(),
+            endorsement_serializer: WrappedSerializer::new(),
+            u32_serializer: U32VarIntSerializer::new(),
+        }
+    }
+}
+
+impl Default for BlockHeaderSerializer2 {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Serializer<BlockHeader> for BlockHeaderSerializer2 {
+    fn serialize(&self, value: &BlockHeader, buffer: &mut Vec<u8>) -> Result<(), SerializeError> {
+        self.slot_serializer.serialize(&value.slot, buffer)?;
+        // parents (note: there should be none if slot period=0)
+        if value.parents.is_empty() {
+            buffer.push(0);
+        } else {
+            buffer.push(1);
+        }
+        for parent_h in value.parents.iter() {
+            buffer.extend(parent_h.0.to_bytes());
+        }
+
+        // operations merkle root
+        buffer.extend(value.operation_merkle_root.to_bytes());
+
+        self.u32_serializer.serialize(
+            &value.endorsements.len().try_into().map_err(|err| {
+                SerializeError::GeneralError(format!("too many endorsements: {}", err))
+            })?,
+            buffer,
+        )?;
+        /*
+        for endorsement in value.endorsements.iter() {
+            self.endorsement_serializer.serialize(endorsement, buffer)?;
+        }
+        */
+
+        for wrapped_endorsement in value.endorsements.iter() {
+            buffer.extend(wrapped_endorsement.signature.into_bytes());
+            buffer.extend(wrapped_endorsement.creator_public_key.into_bytes());
+            let mut buffer_ = Vec::new();
+            // TODO: no unwrap
+            EndorsementSerializerLW::new().serialize(&wrapped_endorsement.content,
+                                                     &mut buffer_)
+                .unwrap();
+            buffer.extend(buffer_);
         }
         Ok(())
     }

@@ -19,6 +19,7 @@ use std::{
     time::Instant,
 };
 use tracing::{info, warn};
+use massa_models::block::BlockHeaderSerializer2;
 
 /// Structure gathering all elements needed by the factory thread
 pub(crate) struct BlockFactoryWorker {
@@ -202,14 +203,14 @@ impl BlockFactoryWorker {
         );
 
         // create header
-        let header: WrappedHeader = BlockHeader::new_wrapped::<BlockHeaderSerializer, BlockId>(
+        let header: WrappedHeader = BlockHeader::new_wrapped::<BlockHeaderSerializer2, BlockId>(
             BlockHeader {
                 slot,
                 parents: parents.into_iter().map(|(id, _period)| id).collect(),
                 operation_merkle_root: global_operations_hash,
                 endorsements,
             },
-            BlockHeaderSerializer::new(), // TODO reuse self.block_header_serializer
+            BlockHeaderSerializer2::new(), // TODO reuse self.block_header_serializer
             block_producer_keypair,
         )
         .expect("error while producing block header");
