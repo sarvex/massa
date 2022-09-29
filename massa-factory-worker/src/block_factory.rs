@@ -18,7 +18,7 @@ use std::{
     thread,
     time::Instant,
 };
-use tracing::{info, warn};
+use tracing::{info, warn, debug};
 use massa_models::block::BlockHeaderSerializer2;
 
 /// Structure gathering all elements needed by the factory thread
@@ -214,6 +214,7 @@ impl BlockFactoryWorker {
             block_producer_keypair,
         )
         .expect("error while producing block header");
+        debug!("header: {:?}", header);
 
         // create block
         let block = Block::new_wrapped(
@@ -230,7 +231,7 @@ impl BlockFactoryWorker {
         block_storage.store_block(block);
 
         // log block creation
-        info!(
+        debug!(
             "block {} created at slot {} by address {}",
             block_id, slot, block_producer_addr
         );
