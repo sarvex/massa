@@ -736,22 +736,10 @@ impl Deserializer<BlockHeader> for BlockHeaderDeserializer {
                     hash_data.extend(buffer_.clone());
                     let hash_full = Hash::compute_from(&hash_data);
 
-                    /*
-                    let mut hash_data = Vec::new();
-                    hash_data.extend(e.creator_public_key.to_bytes());
-                    let mut buffer_ = Vec::new();
-                    EndorsementSerializerLW::new()
-                        .serialize(&e.content, &mut buffer_)
-                        .map_err(|_| "Unable to ser again")?;
-                    hash_data.extend(buffer_);
-                    let hash_light = Hash::compute_from(&hash_data);
-                    */
-
-                    if *e.id.get_hash() == hash_full {
-                        e.serialized_data = buffer_;
-                        // e.id = EndorsementId::new(hash_full);
-                    }
-
+                    // if *e.id.get_hash() == hash_full {
+                    e.serialized_data = buffer_;
+                    e.id = EndorsementId::new(hash_full);
+                    // }
 
                     Ok::<(), &str>(())
                 })
@@ -850,7 +838,7 @@ mod test {
                             index: 1,
                             endorsed_block: BlockId(Hash::compute_from(&[1])),
                         },
-                        EndorsementSerializerLW::new(),
+                        EndorsementSerializer::new(),
                         &keypair,
                     )
                     .unwrap(),
@@ -860,13 +848,13 @@ mod test {
                             index: 3,
                             endorsed_block: BlockId(Hash::compute_from(&[3])),
                         },
-                        EndorsementSerializerLW::new(),
+                        EndorsementSerializer::new(),
                         &keypair,
                     )
                     .unwrap(),
                 ],
             },
-            BlockHeaderSerializer::new(),
+            BlockHeaderSerializer2::new(),
             &keypair,
         )
         .unwrap();
