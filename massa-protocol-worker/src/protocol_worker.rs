@@ -351,6 +351,13 @@ impl ProtocolWorker {
     async fn announce_ops(&mut self, timer: &mut Pin<&mut Sleep>) {
         // Quit if empty  to avoid iterating on nodes
         if self.operations_to_announce.is_empty() {
+            // Reset timer.
+            let now = Instant::now();
+            let next_tick = now
+                .checked_add(self.config.operation_announcement_interval.into())
+                // .ok_or(TimeError::TimeOverflowError)?;
+                .unwrap();
+            timer.set(sleep_until(next_tick));
             return;
         }
         let operation_ids = mem::take(&mut self.operations_to_announce);
@@ -556,7 +563,6 @@ impl ProtocolWorker {
                 self.note_operations_to_announce(&to_announce, op_timer)
                     .await;
                 debug!("DEBUG: END PROPAGATE OPERATIONS COMMAND");
-
             }
             ProtocolCommand::PropagateEndorsements(endorsements) => {
                 self.propagate_endorsements(&endorsements).await;

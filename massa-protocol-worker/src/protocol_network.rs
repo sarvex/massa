@@ -22,7 +22,7 @@ use massa_serialization::Serializer;
 use massa_storage::Storage;
 use std::pin::Pin;
 use tokio::time::{Instant, Sleep};
-use tracing::{info, warn, debug};
+use tracing::{debug, info, warn};
 
 // static tracing messages
 static NEW_CONN: &str = "protocol.protocol_worker.on_network_event.new_connection";
@@ -562,13 +562,14 @@ impl ProtocolWorker {
                 // Ban the node if the operation ids hash doesn't match with the hash contained in
                 // the block_header.
                 debug!("DEBUG: Before operation list received");
-                let res = self.on_block_operation_list_received(
-                    from_node_id,
-                    block_id,
-                    operation_list,
-                    op_timer,
-                )
-                .await;
+                let res = self
+                    .on_block_operation_list_received(
+                        from_node_id,
+                        block_id,
+                        operation_list,
+                        op_timer,
+                    )
+                    .await;
                 debug!("DEBUG: After operation list received");
                 res
             }
@@ -577,7 +578,8 @@ impl ProtocolWorker {
                 // before performing the below checks,
                 // and wait for them to have been procesed(i.e. added to storage).
                 debug!("DEBUG: Before operation full received");
-                let res = self.on_block_full_operations_received(from_node_id, block_id, operations, op_timer)
+                let res = self
+                    .on_block_full_operations_received(from_node_id, block_id, operations, op_timer)
                     .await;
                 debug!("DEBUG: After operation full received");
                 res
