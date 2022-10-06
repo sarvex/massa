@@ -79,7 +79,7 @@ use massa_models::{
     stats::NetworkStats,
 };
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, net::IpAddr};
+use std::{collections::HashMap, fmt::Display, net::IpAddr};
 use tokio::sync::oneshot;
 
 /// network command
@@ -247,7 +247,7 @@ pub enum BlockInfoReply {
 
 /// network event
 #[allow(clippy::large_enum_variant)]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum NetworkEvent {
     /// new connection from node
     NewConnection(NodeId),
@@ -302,6 +302,24 @@ pub enum NetworkEvent {
         /// Endorsements
         endorsements: Vec<WrappedEndorsement>,
     },
+}
+
+impl Display for NetworkEvent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            NetworkEvent::NewConnection(_) => write!(f, "NewConnection"),
+            NetworkEvent::ConnectionClosed(_) => write!(f, "ConnectionClosed"),
+            NetworkEvent::ReceivedBlockInfo { .. } => write!(f, "ReceivedBlockInfo"),
+            NetworkEvent::ReceivedBlockHeader { .. } => write!(f, "ReceivedBlockHeader"),
+            NetworkEvent::AskedForBlocks { .. } => write!(f, "AskedForBlocks"),
+            NetworkEvent::ReceivedOperations { .. } => write!(f, "ReceivedOperations"),
+            NetworkEvent::ReceivedOperationAnnouncements { .. } => {
+                write!(f, "ReceivedOperationAnnouncements")
+            }
+            NetworkEvent::ReceiveAskForOperations { .. } => write!(f, "ReceiveAskForOperations"),
+            NetworkEvent::ReceivedEndorsements { .. } => write!(f, "ReceivedEndorsements"),
+        }
+    }
 }
 
 /// Network management command

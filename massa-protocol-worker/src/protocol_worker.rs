@@ -297,32 +297,43 @@ impl ProtocolWorker {
                 // listen to network controller events
                 evt = self.network_event_receiver.wait_event() => {
                     massa_trace!("protocol.protocol_worker.run_loop.network_event_rx", {});
-                    self.on_network_event(evt?, &mut block_ask_timer, &mut operation_announcement_interval).await?;
+                    let event = evt?;
+                    debug!("DEBUG: Start manage network event: {}", event);
+                    self.on_network_event(event.clone(), &mut block_ask_timer, &mut operation_announcement_interval).await?;
+                    debug!("DEBUG: End manage network event: {}", event);
                 }
 
                 // block ask timer
                 _ = &mut block_ask_timer => {
                     massa_trace!("protocol.protocol_worker.run_loop.block_ask_timer", { });
+                    debug!("DEBUG: Start update block timer");
                     self.update_ask_block(&mut block_ask_timer).await?;
+                    debug!("DEBUG: End update block timer");
                 }
 
                 // Operation announcement interval.
                 _ = &mut operation_announcement_interval => {
                     // Announce operations.
+                    debug!("DEBUG: Start operation interval timer");
                     self.announce_ops(&mut operation_announcement_interval).await;
+                    debug!("DEBUG: End operation interval timer");
                 }
 
                 // operation ask timer
                 _ = &mut operation_batch_proc_period_timer => {
                     massa_trace!("protocol.protocol_worker.run_loop.operation_ask_and_announce_timer", { });
 
+                    debug!("DEBUG: Start operation ask timer");
                     // Update operations to ask.
                     self.update_ask_operation(&mut operation_batch_proc_period_timer).await?;
+                    debug!("DEBUG: End operation ask timer");
                 }
                 // operation prune timer
                 _ = &mut operation_prune_timer => {
+                    debug!("DEBUG: Start pruning ask timer");
                     massa_trace!("protocol.protocol_worker.run_loop.operation_prune_timer", { });
                     self.prune_asked_operations(&mut operation_prune_timer)?;
+                    debug!("DEBUG: End pruning ask timer");
                 }
             }
             massa_trace!("protocol.protocol_worker.run_loop.end", {});
