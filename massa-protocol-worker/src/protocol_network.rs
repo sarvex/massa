@@ -22,7 +22,7 @@ use massa_serialization::Serializer;
 use massa_storage::Storage;
 use std::pin::Pin;
 use tokio::time::{Instant, Sleep};
-use tracing::{info, warn};
+use tracing::{info, warn, debug};
 
 // static tracing messages
 static NEW_CONN: &str = "protocol.protocol_worker.on_network_event.new_connection";
@@ -74,10 +74,12 @@ impl ProtocolWorker {
                 info,
             } => {
                 massa_trace!(BLOCKS_INFO, { "node": from_node_id, "info": info });
+                debug!("DEBUG: BEFORE RECEIVE BLOCK INFO");
                 for (block_id, block_info) in info.into_iter() {
                     self.on_block_info_received(from_node_id, block_id, block_info, op_timer)
                         .await?;
                 }
+                debug!("DEBUG: AFTER RECEIVE BLOCK INFO");
                 // Re-run the ask block algorithm.
                 self.update_ask_block(block_ask_timer).await?;
             }
@@ -117,8 +119,10 @@ impl ProtocolWorker {
             }
             NetworkEvent::ReceivedOperations { node, operations } => {
                 massa_trace!(OPS, { "node": node, "operations": operations});
+                debug!("DEBUG: BEFORE RECEIVE OPERATION NETWORK");
                 self.on_operations_received(node, operations, op_timer)
                     .await;
+                debug!("DEBUG: END RECEIVE OPERATION NETWORK");
             }
             NetworkEvent::ReceivedEndorsements { node, endorsements } => {
                 massa_trace!(ENDORSEMENTS, { "node": node, "endorsements": endorsements});
@@ -376,7 +380,8 @@ impl ProtocolWorker {
 
             // If the block is empty, go straight to processing the full block info.
             if operation_ids.is_empty() {
-                return self
+                debug!("DEBUG: Before operation full empty received");
+                let res = self
                     .on_block_full_operations_received(
                         from_node_id,
                         block_id,
@@ -384,6 +389,8 @@ impl ProtocolWorker {
                         op_timer,
                     )
                     .await;
+                debug!("DEBUG: After operation full empty received");
+                return res;
             }
         } else {
             warn!("Node id {} sent us a operation list for block id {} but the hash in header doesn't match.", from_node_id, block_id);
@@ -554,20 +561,26 @@ impl ProtocolWorker {
                 // that block.
                 // Ban the node if the operation ids hash doesn't match with the hash contained in
                 // the block_header.
-                self.on_block_operation_list_received(
+                debug!("DEBUG: Before operation list received");
+                let res = self.on_block_operation_list_received(
                     from_node_id,
                     block_id,
                     operation_list,
                     op_timer,
                 )
-                .await
+                .await;
+                debug!("DEBUG: After operation list received");
+                res
             }
             BlockInfoReply::Operations(operations) => {
                 // Send operations to pool,
                 // before performing the below checks,
                 // and wait for them to have been procesed(i.e. added to storage).
-                self.on_block_full_operations_received(from_node_id, block_id, operations, op_timer)
-                    .await
+                debug!("DEBUG: Before operation full received");
+                let res = self.on_block_full_operations_received(from_node_id, block_id, operations, op_timer)
+                    .await;
+                debug!("DEBUG: After operation full received");
+                res
             }
             BlockInfoReply::NotFound => {
                 if let Some(info) = self.active_nodes.get_mut(&from_node_id) {

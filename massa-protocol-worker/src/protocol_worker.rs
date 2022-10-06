@@ -289,10 +289,12 @@ impl ProtocolWorker {
 
                 // listen to incoming commands
                 Some(cmd) = self.controller_command_rx.recv() => {
+                    debug!("DEBUG: Start command manage");
                     self.process_command(cmd, &mut
                         block_ask_timer,
                         &mut operation_announcement_interval).await?;
-                }
+                    debug!("DEBUG: End command manage");
+                    }
 
                 // listen to network controller events
                 evt = self.network_event_receiver.wait_event() => {
@@ -550,8 +552,11 @@ impl ProtocolWorker {
 
                 // Announce operations to active nodes not knowing about it.
                 let to_announce: Vec<OperationId> = operation_ids.iter().copied().collect();
+                debug!("DEBUG: BEFORE PROPAGATE OPERATIONS COMMAND");
                 self.note_operations_to_announce(&to_announce, op_timer)
                     .await;
+                debug!("DEBUG: END PROPAGATE OPERATIONS COMMAND");
+
             }
             ProtocolCommand::PropagateEndorsements(endorsements) => {
                 self.propagate_endorsements(&endorsements).await;
@@ -1057,8 +1062,10 @@ impl ProtocolWorker {
             ops_to_propagate.drop_operation_refs(&operations_to_not_propagate);
             let to_announce: Vec<OperationId> =
                 ops_to_propagate.get_op_refs().iter().copied().collect();
+            debug!("DEBUG: Before note operation from node to announce");
             self.note_operations_to_announce(&to_announce, op_timer)
                 .await;
+            debug!("DEBUG: End note operation from node to announce");
 
             // Add to pool
             self.pool_controller.add_operations(ops);
