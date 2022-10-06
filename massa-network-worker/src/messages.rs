@@ -29,8 +29,8 @@ use nom::{
 };
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use serde::{Deserialize, Serialize};
-use std::net::IpAddr;
 use std::ops::Bound::{Excluded, Included};
+use std::{fmt::Display, net::IpAddr};
 
 /// All messages that can be sent or received.
 #[allow(clippy::large_enum_variant)]
@@ -72,6 +72,46 @@ pub enum Message {
     Operations(Vec<WrappedOperation>),
     /// Endorsements
     Endorsements(Vec<WrappedEndorsement>),
+}
+
+impl Display for Message {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Message::HandshakeInitiation { .. } => {
+                write!(f, "HandshakeInitiation")
+            }
+            Message::HandshakeReply { .. } => {
+                write!(f, "HandshakeReply")
+            }
+            Message::BlockHeader(_) => {
+                write!(f, "BlockHeader")
+            }
+            Message::AskForBlocks(_) => {
+                write!(f, "AskForBlocks")
+            }
+            Message::ReplyForBlocks(_) => {
+                write!(f, "ReplyForBlocks")
+            }
+            Message::AskPeerList => {
+                write!(f, "AskPeerList")
+            }
+            Message::PeerList(_) => {
+                write!(f, "PeerList")
+            }
+            Message::OperationsAnnouncement(_) => {
+                write!(f, "OperationsAnnouncement")
+            }
+            Message::AskForOperations(_) => {
+                write!(f, "AskForOperations")
+            }
+            Message::Operations(_) => {
+                write!(f, "Operations")
+            }
+            Message::Endorsements(_) => {
+                write!(f, "Endorsements")
+            }
+        }
+    }
 }
 
 #[derive(IntoPrimitive, Debug, Eq, PartialEq, TryFromPrimitive)]

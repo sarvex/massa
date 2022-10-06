@@ -97,6 +97,7 @@ impl NodeWorker {
         sender: &Sender<Message>,
         msg: Message,
     ) -> Result<(), NetworkError> {
+        debug!("Sending message to node: {}, msg: {}", self.node_id, msg);
         match sender.try_send(msg) {
             Err(TrySendError::Full(_)) => {
                 debug!(
