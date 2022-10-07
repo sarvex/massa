@@ -364,7 +364,10 @@ impl ProtocolWorker {
         massa_trace!("protocol.protocol_worker.announce_ops.begin", {
             "operation_ids": operation_ids
         });
-        debug!("DEBUG: Announcement: Len operations ids = {}", operation_ids.len());
+        debug!(
+            "DEBUG: Announcement: Len operations ids = {}",
+            operation_ids.len()
+        );
         for (node, node_info) in self.active_nodes.iter_mut() {
             debug!("DEBUG: Announcement: Start filter for node {}", node);
             let new_ops: Vec<OperationId> = operation_ids
@@ -382,7 +385,7 @@ impl ProtocolWorker {
                     .announce_operations(*node, new_ops.iter().map(|id| id.into_prefix()).collect())
                     .await;
                 debug!("DEBUG: Announcement: End send for node {}", node);
-                    if let Err(err) = res {
+                if let Err(err) = res {
                     debug!("could not send operation batch to node {}: {}", node, err);
                 }
             }

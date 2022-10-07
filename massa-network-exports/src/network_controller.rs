@@ -18,10 +18,11 @@ use std::{
     net::IpAddr,
 };
 use tokio::{
+    sync::mpsc::error::TrySendError,
     sync::{mpsc, oneshot},
     task::JoinHandle,
 };
-use tracing::info;
+use tracing::{info, log::warn, debug};
 
 /// Network command sender
 #[derive(Clone)]
@@ -197,14 +198,20 @@ impl NetworkCommandSender {
         to_node: NodeId,
         batch: OperationPrefixIds,
     ) -> Result<(), NetworkError> {
-        self.0
-            .send(NetworkCommand::SendOperationAnnouncements { to_node, batch })
-            .await
-            .map_err(|_| {
-                NetworkError::ChannelError(
+        match self
+            .0
+            .try_send(NetworkCommand::SendOperationAnnouncements { to_node, batch })
+        {
+            Ok(()) => {}
+            Err(TrySendError::Full(_)) => {
+                warn!("Failed to send NetworkCommand SendOperationAnnouncements channel full");
+            }
+            Err(TrySendError::Closed(_)) => {
+                return Err(NetworkError::ChannelError(
                     "could not send SendOperationAnnouncements command".into(),
-                )
-            })?;
+                ));
+            }
+        };
         Ok(())
     }
 
