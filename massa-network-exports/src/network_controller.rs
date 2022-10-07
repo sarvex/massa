@@ -22,7 +22,7 @@ use tokio::{
     sync::{mpsc, oneshot},
     task::JoinHandle,
 };
-use tracing::{info, log::warn, debug};
+use tracing::{info, warn};
 
 /// Network command sender
 #[derive(Clone)]
