@@ -316,9 +316,9 @@ impl ProtocolWorker {
                 // Operation announcement interval.
                 _ = &mut operation_announcement_interval => {
                     // Announce operations.
-                    debug!("DEBUG: Start operation interval timer");
+                    debug!("DEBUG: Announcement: Start operation interval timer");
                     self.announce_ops(&mut operation_announcement_interval).await;
-                    debug!("DEBUG: End operation interval timer");
+                    debug!("DEBUG: Announcement: End operation interval timer");
                 }
 
                 // operation ask timer
@@ -364,19 +364,25 @@ impl ProtocolWorker {
         massa_trace!("protocol.protocol_worker.announce_ops.begin", {
             "operation_ids": operation_ids
         });
+        debug!("DEBUG: Announcement: Len operations ids = {}", operation_ids.len());
         for (node, node_info) in self.active_nodes.iter_mut() {
+            debug!("DEBUG: Announcement: Start filter for node {}", node);
             let new_ops: Vec<OperationId> = operation_ids
                 .iter()
                 .filter(|id| !node_info.knows_op(id))
                 .copied()
                 .collect();
+            debug!("DEBUG: Announcement: End filter for node {}", node);
             node_info.insert_known_ops(&new_ops, self.config.max_node_known_ops_size);
+            debug!("DEBUG: Announcement: End insert for node {}", node);
             if !new_ops.is_empty() {
+                debug!("DEBUG: Announcement: Start send for node {}", node);
                 let res = self
                     .network_command_sender
                     .announce_operations(*node, new_ops.iter().map(|id| id.into_prefix()).collect())
                     .await;
-                if let Err(err) = res {
+                debug!("DEBUG: Announcement: End send for node {}", node);
+                    if let Err(err) = res {
                     debug!("could not send operation batch to node {}: {}", node, err);
                 }
             }
