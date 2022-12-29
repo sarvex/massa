@@ -258,7 +258,14 @@ impl PoSFinalState {
                 (cycle_info.roll_counts.clone(), state_hash)
             }
             // looking back to negative cycles
-            None => (self.initial_rolls.clone(), self.initial_ledger_hash),
+            None => {
+                debug!("[DBG] initial_rolls at lookback = {:?}", self.initial_rolls);
+                debug!(
+                    "[DBG] initial_ledger_hash at lookback = {}",
+                    self.initial_ledger_hash
+                );
+                (self.initial_rolls.clone(), self.initial_ledger_hash)
+            }
         };
 
         // get seed lookback
@@ -282,6 +289,11 @@ impl PoSFinalState {
             // looking back to negative cycles
             None => self.initial_seeds[draw_cycle as usize],
         };
+
+        debug!(
+            "[DBG] selector fed with: draw_cycle = {}, lookback_rolls = {:?}, lookback_seed = {}",
+            draw_cycle, lookback_rolls, lookback_seed
+        );
 
         // feed selector
         self.selector

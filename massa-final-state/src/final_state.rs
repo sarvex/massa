@@ -48,6 +48,8 @@ impl FinalState {
         ledger: Box<dyn LedgerController>,
         selector: Box<dyn SelectorController>,
     ) -> Result<Self, FinalStateError> {
+        debug!("[DBG] ledger hash at FinalState::new = {}", ledger.get_ledger_hash());
+
         // create the pos state
         let pos_state = PoSFinalState::new(
             config.pos_config.clone(),
