@@ -164,7 +164,7 @@ impl NodeWorker {
         // Stop the writer handle.
         if !writer_joined {
             debug!(
-                "node_worker.run_loop.cleanup.node_reader_handle.abort, node_id: {}",
+                "node_worker.run_loop.cleanup.node_writer_handle.abort, node_id: {}",
                 self.node_id
             );
             node_writer_handle.abort();
@@ -194,6 +194,8 @@ async fn node_writer_handle(
     max_operations_per_message: u32,
     max_endorsements_per_message: u32,
 ) -> ConnectionClosureReason {
+    debug!("(DBG) node writer start");
+
     let mut exit_reason = ConnectionClosureReason::Normal;
 
     'writer_loop: loop {
@@ -305,6 +307,8 @@ async fn node_writer_handle(
                     break 'writer_loop;
                 }
                 Ok(Ok(id)) => {
+                    debug!("(DBG) node {} writer message = {:?}", node_id, msg);
+
                     massa_trace!("node_worker.run_loop.loop.writer_command_rx.recv.send.ok", {
                                     "node": node_id, "msg_id": id});
                 }
@@ -312,22 +316,28 @@ async fn node_writer_handle(
         }
     }
 
+    debug!("(DBG) node writer exit reason = {:?}", exit_reason);
+
     exit_reason
 }
 
 /// Handle socket read function until a message is received then send it
-// via 'node_event_tx' queue
+/// via 'node_event_tx' queue
 async fn node_reader_handle(
     socket_reader: &mut ReadBinder,
     node_event_tx: &mut Sender<NodeEvent>,
     node_id: NodeId,
     max_send_wait: MassaTime,
 ) -> ConnectionClosureReason {
+    debug!("(DBG) node reader start");
+
     let mut exit_reason = ConnectionClosureReason::Normal;
 
     loop {
         match socket_reader.next().await {
             Ok(Some((index, msg))) => {
+                debug!("(DBG) node {} reader message = {:?}", node_id, msg);
+
                 massa_trace!("node_worker.run_loop. receive self.socket_reader.next()", {
                     "index": index
                 });
@@ -419,6 +429,8 @@ async fn node_reader_handle(
             }
         }
     }
+
+    debug!("(DBG) node reader exit reason = {:?}", exit_reason);
 
     exit_reason
 }
