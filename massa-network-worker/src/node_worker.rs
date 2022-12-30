@@ -307,7 +307,7 @@ async fn node_writer_handle(
                     break 'writer_loop;
                 }
                 Ok(Ok(id)) => {
-                    debug!("(DBG) node {} writer message = {:?}", node_id, msg);
+                    debug!("(DBG) node {} writer message = {}", node_id, msg);
 
                     massa_trace!("node_worker.run_loop.loop.writer_command_rx.recv.send.ok", {
                                     "node": node_id, "msg_id": id});
@@ -336,7 +336,7 @@ async fn node_reader_handle(
     loop {
         match socket_reader.next().await {
             Ok(Some((index, msg))) => {
-                debug!("(DBG) node {} reader message = {:?}", node_id, msg);
+                debug!("(DBG) node {} reader message = {}", node_id, msg);
 
                 massa_trace!("node_worker.run_loop. receive self.socket_reader.next()", {
                     "index": index

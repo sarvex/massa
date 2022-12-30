@@ -1,5 +1,6 @@
 // Copyright (c) 2022 MASSA LABS <info@massa.net>
 
+use core::fmt::Display;
 use massa_hash::HashDeserializer;
 use massa_models::{
     block::{BlockHeader, BlockHeaderDeserializer, BlockId, WrappedHeader},
@@ -29,6 +30,7 @@ use nom::{
 };
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use serde::{Deserialize, Serialize};
+use std::fmt;
 use std::net::IpAddr;
 use std::ops::Bound::{Excluded, Included};
 
@@ -72,6 +74,25 @@ pub enum Message {
     Operations(Vec<WrappedOperation>),
     /// Endorsements
     Endorsements(Vec<WrappedEndorsement>),
+}
+
+impl Display for Message {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let display = match self {
+            Self::HandshakeInitiation { .. } => "HandshakeInitiation",
+            Self::HandshakeReply { .. } => "HandshakeReply",
+            Self::BlockHeader(_header) => "BlockHeader",
+            Self::AskForBlocks(_blocks) => "AskForBlocks",
+            Self::ReplyForBlocks(_blocks_replies) => "ReplyForBlocks",
+            Self::AskPeerList => "AskPeerList",
+            Self::PeerList(_peer_list) => "PeerList",
+            Self::OperationsAnnouncement(_ids) => "OperationsAnnouncement",
+            Self::AskForOperations(_ids) => "AskForOperations",
+            Self::Operations(_operations) => "Operations",
+            Self::Endorsements(_endorsements) => "Endorsements",
+        };
+        write!(f, "{}", display)
+    }
 }
 
 #[derive(IntoPrimitive, Debug, Eq, PartialEq, TryFromPrimitive)]
