@@ -410,6 +410,7 @@ async fn node_reader_handle(
                         massa_trace!("node_worker.run_loop.self.socket_reader.next(). Unexpected message Warning", {});
                     }
                 }
+                debug!("(DBG) node {} reader message end", node_id);
             }
             Ok(None) => {
                 massa_trace!(
