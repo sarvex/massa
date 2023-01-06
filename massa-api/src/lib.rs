@@ -131,6 +131,38 @@ pub trait ApiServer: MassaApiServer {
     ) -> Result<StopHandle, JsonRpseeError>;
 }
 
+#[derive(Clone)]
+struct MassaLogger;
+
+impl jsonrpsee_server::logger::Logger for MassaLogger {
+    type Instant = std::time::Instant;
+
+    fn on_call(&self, method_name: &str, params: jsonrpsee::types::Params, kind: jsonrpsee_server::logger::MethodKind, transport: jsonrpsee_server::logger::TransportProtocol) {
+        info!(method_name, params = ?params, kind = ?kind, transport = ?transport, "API call");
+    }
+
+    fn on_connect(&self, _remote_addr: SocketAddr, _request: &jsonrpsee_server::logger::HttpRequest, _t: jsonrpsee_server::logger::TransportProtocol) {
+        //info!("API connect");
+    }
+
+    fn on_disconnect(&self, _remote_addr: SocketAddr, _t: jsonrpsee_server::logger::TransportProtocol) {
+        //info!("API disconnect");
+    }
+
+    fn on_request(&self, transport: jsonrpsee_server::logger::TransportProtocol) -> Self::Instant {
+        //info!(transport = ?transport, "API request");
+        std::time::Instant::now()
+    }
+
+    fn on_response(&self, result: &str, started_at: Self::Instant, transport: jsonrpsee_server::logger::TransportProtocol) {
+        info!(result, transport = ?transport, duration = ?started_at.elapsed(), "API response");
+    }
+
+    fn on_result(&self, method_name: &str, success: bool, started_at: Self::Instant, transport: jsonrpsee_server::logger::TransportProtocol) {
+        info!(method_name, success, transport = ?transport, duration = ?started_at.elapsed(), "API result");
+    }
+}
+
 async fn serve<T>(
     api: RpcModule<T>,
     url: &SocketAddr,
@@ -147,12 +179,15 @@ async fn serve<T>(
         AllowHosts::Only(hosts)
     };
 
+    let logger = MassaLogger {};
+
     let mut server_builder = ServerBuilder::new()
         .max_request_body_size(api_config.max_request_body_size)
         .max_response_body_size(api_config.max_response_body_size)
         .max_connections(api_config.max_connections)
         .set_host_filtering(allowed_hosts)
         .batch_requests_supported(api_config.batch_requests_supported)
+        .set_logger(logger)
         .ping_interval(api_config.ping_interval.to_duration());
 
     if api_config.enable_http && !api_config.enable_ws {
