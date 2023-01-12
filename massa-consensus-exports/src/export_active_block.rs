@@ -156,7 +156,7 @@ impl Deserializer<ExportActiveBlock> for ExportActiveBlockDeserializer {
     /// ## Example:
     /// ```rust
     /// use massa_consensus_exports::export_active_block::{ExportActiveBlock, ExportActiveBlockDeserializer, ExportActiveBlockSerializer};
-    /// use massa_models::{ledger_models::LedgerChanges, config::THREAD_COUNT, rolls::RollUpdates, block::{BlockId, Block, BlockSerializer, BlockHeader, BlockHeaderSerializer}, prehash::PreHashSet, endorsement::{Endorsement, EndorsementSerializerLW}, slot::Slot, wrapped::WrappedContent};
+    /// use massa_models::{ledger_models::LedgerChanges, config::THREAD_COUNT, rolls::RollUpdates, block::{BlockId, Block, BlockSerializer, BlockHeader, BlockHeaderSerializer}, prehash::PreHashSet, endorsement::{Endorsement, EndorsementSerializer}, slot::Slot, wrapped::WrappedContent};
     /// use massa_hash::Hash;
     /// use std::collections::HashSet;
     /// use massa_signature::KeyPair;
@@ -180,7 +180,7 @@ impl Deserializer<ExportActiveBlock> for ExportActiveBlockDeserializer {
     ///                     index: 1,
     ///                     endorsed_block: BlockId(Hash::compute_from(&[1])),
     ///                 },
-    ///                 EndorsementSerializerLW::new(),
+    ///                 EndorsementSerializer::new(),
     ///                 &keypair,
     ///             )
     ///             .unwrap(),
@@ -190,7 +190,7 @@ impl Deserializer<ExportActiveBlock> for ExportActiveBlockDeserializer {
     ///                     index: 3,
     ///                     endorsed_block: BlockId(Hash::compute_from(&[1])),
     ///                 },
-    ///                 EndorsementSerializerLW::new(),
+    ///                 EndorsementSerializer::new(),
     ///                 &keypair,
     ///             )
     ///             .unwrap(),
