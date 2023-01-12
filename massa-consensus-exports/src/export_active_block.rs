@@ -178,7 +178,7 @@ impl Deserializer<ExportActiveBlock> for ExportActiveBlockDeserializer {
     ///                 Endorsement {
     ///                     slot: Slot::new(1, 1),
     ///                     index: 1,
-    ///                     endorsed_block: BlockId(Hash::compute_from("blk1".as_bytes())),
+    ///                     endorsed_block: BlockId(Hash::compute_from(&[1])),
     ///                 },
     ///                 EndorsementSerializerLW::new(),
     ///                 &keypair,
@@ -186,9 +186,9 @@ impl Deserializer<ExportActiveBlock> for ExportActiveBlockDeserializer {
     ///             .unwrap(),
     ///             Endorsement::new_wrapped(
     ///                 Endorsement {
-    ///                     slot: Slot::new(4, 0),
+    ///                     slot: Slot::new(1, 1),
     ///                     index: 3,
-    ///                     endorsed_block: BlockId(Hash::compute_from("blk2".as_bytes())),
+    ///                     endorsed_block: BlockId(Hash::compute_from(&[1])),
     ///                 },
     ///                 EndorsementSerializerLW::new(),
     ///                 &keypair,
@@ -220,6 +220,9 @@ impl Deserializer<ExportActiveBlock> for ExportActiveBlockDeserializer {
     /// assert_eq!(export_deserialized.block.id, export_active_block.block.id);
     /// assert_eq!(export_deserialized.block.serialized_data, export_active_block.block.serialized_data);
     /// assert_eq!(rest.len(), 0);
+    /// for endo in export_deserialized.block.content.header.content.endorsements.iter() {
+    ///     endo.verify_signature().unwrap();
+    /// }
     /// ```
     fn deserialize<'a, E: ParseError<&'a [u8]> + ContextError<&'a [u8]>>(
         &self,
