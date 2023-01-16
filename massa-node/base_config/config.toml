@@ -18,7 +18,7 @@
     # path to the openrpc specification file used in `rpc.discover` method
     openrpc_spec_path = "base_config/openrpc.json"
     # maximum size in bytes of a request
-    max_request_body_size = 52428800 
+    max_request_body_size = 52428800
     # maximum size in bytes of a response
     max_response_body_size = 52428800
     # maximum number of incoming connections allowed
@@ -221,7 +221,7 @@
     # timeout to establish a bootstrap connection
     connect_timeout = 15000
     # timeout for providing the bootstrap to a connection
-    bootstrap_timeout = 1200000
+    bootstrap_timeout = 2000
     # delay in milliseconds to wait between consecutive bootstrap attempts
     retry_delay = 60000
     # if ping is too high bootstrap will be interrupted after max_ping milliseconds
