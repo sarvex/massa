@@ -113,7 +113,8 @@ message SendOperationsRequest {
     }
 
 
-// message struct    // region Endorsement
+// region Endorsement
+    // message struct
     message EndorsementInfo {
       // string field
       string id = 1;
@@ -154,7 +155,8 @@ message SendOperationsRequest {
     }
 
 
-// message struct    // region Operation
+// region Operation
+    // message struct
     message OperationInfo {
       // string field
       string id = 1;
@@ -299,7 +301,8 @@ message SendOperationsRequest {
     }
 
 
-// message struct    // common
+// commons
+    // message struct   
     message MassaTime {
       // int64 field
       int64 value = 1;
