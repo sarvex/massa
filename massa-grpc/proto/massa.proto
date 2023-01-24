@@ -14,7 +14,6 @@ service Massa {
   rpc SendEndorsements ( stream SendEndorsementsRequest ) returns ( stream EndorsementId ) {}
   // SendOperations
   rpc SendOperations ( stream SendOperationsRequest ) returns ( stream OperationId ) {}
-
 }
 
 // SendEndorsementsRequest holds parameters to SendEndorsements
@@ -39,9 +38,9 @@ message SendOperationsRequest {
     // message struct
     message Block {
       // object field
-      BlockHeader header = 1;
+      WrappedBlockHeader header = 1;
       // object field
-      repeated OperationInfo operations = 2;
+      repeated string operations = 2;
     }
 
     // message struct
@@ -83,35 +82,44 @@ message SendOperationsRequest {
     }
 
     // message struct
+    message FilledBlock {
+      // object field
+      WrappedBlockHeader header = 1;
+      // object field
+      repeated OperationInfo operations = 2;
+    }
+    
+    // message struct
+    message FilledBlockInfo {
+      // string field
+      string id = 1;
+      // object field
+      FilledBlockInfoContent content = 2;
+    }
+
+    // message struct
+    message FilledBlockInfoContent {
+      // bool field
+      bool is_final = 1;
+      // bool field
+      bool is_stale = 2;
+      // bool field
+      bool is_in_blockclique = 3;
+      // object field
+      FilledBlock block = 4;
+    }
+
+    // message struct
     message WrappedBlockHeader {
       // object field
       BlockHeader content = 1;
       // object field
       Signature signature = 2;
       // object field
-      PubKey creator_public_key = 3;
+      PublicKey creator_public_key = 3;
       // object field
       Address creator_address = 4;
     }
-
-    // message struct
-    message WrappedBlock {
-      // object field
-      Block content = 1;
-      // object field
-      Signature signature = 2;
-      // object field
-      PubKey creator_public_key = 3;
-      // object field
-      Address creator_address = 4;
-    }
-
-    // message struct
-    message Address {
-      // string field
-      string value = 1;
-    }
-
 
 // region Endorsement
     // message struct
@@ -153,7 +161,6 @@ message SendOperationsRequest {
       // string field
       string value = 1;
     }
-
 
 // region Operation
     // message struct
@@ -261,12 +268,6 @@ message SendOperationsRequest {
     }
 
     // message struct
-    message PubKey {
-      // string field
-      string value = 1;
-    }
-
-    // message struct
     message OperationInput {
       // string field
       string creator_public_key = 1;
@@ -283,7 +284,7 @@ message SendOperationsRequest {
       // object field
       Signature signature = 2;
       // object field
-      PubKey creator_public_key = 3;
+      PublicKey creator_public_key = 3;
       // object field
       Address creator_address = 4;
     }
@@ -295,18 +296,29 @@ message SendOperationsRequest {
       // object field
       Signature signature = 2;
       // object field
-      PubKey creator_public_key = 3;
+      PublicKey creator_public_key = 3;
       // object field
       Address creator_address = 4;
     }
 
-
 // commons
+    // message struct
+    message Address {
+      // string field
+      string value = 1;
+    }
+    
     // message struct   
     message MassaTime {
       // int64 field
       int64 value = 1;
     }
+
+   // message struct
+   message PublicKey {
+     // string field
+     string value = 1;
+   }
 
     // message struct
     message Version {
