@@ -3,16 +3,14 @@
 use crate::error::ModelsError;
 use crate::prehash::PreHashed;
 use massa_hash::{Hash, HashDeserializer};
-use massa_serialization::{
-    DeserializeError, Deserializer, Serializer, U64VarIntDeserializer, U64VarIntSerializer,
-};
+use massa_serialization::{DeserializeError, Deserializer, SerializeError, Serializer};
 use massa_signature::PublicKey;
 use nom::branch::alt;
 use nom::character::complete::char;
 use nom::error::{context, ContextError, ParseError};
+use nom::sequence::preceded;
 use nom::{IResult, Parser};
 use serde::{Deserialize, Serialize};
-use std::ops::Bound::Included;
 use std::str::FromStr;
 mod sc_addr;
 mod user_addr;
@@ -31,6 +29,15 @@ pub enum Address {
     SC(SCAddress),
 }
 
+impl std::fmt::Debug for Address {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::User(arg0) => f.debug_tuple("Address").field(arg0).finish(),
+            Self::SC(arg0) => f.debug_tuple("Address").field(arg0).finish(),
+        }
+    }
+}
+
 const ADDRESS_PREFIX: char = 'A';
 
 impl std::fmt::Display for Address {
@@ -44,16 +51,11 @@ impl std::fmt::Display for Address {
                 Address::SC(_) => 'S',
             },
             match self {
-                Address::User(usr) => usr,
-                Address::SC(sc) => todo!(),
-            },
+                Address::User(usr) => usr.bs58_encode(),
+                Address::SC(sc) => sc.bs58_encode(),
+            }
+            .map_err(|_| std::fmt::Error)?,
         )
-    }
-}
-
-impl std::fmt::Debug for Address {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{}", self)
     }
 }
 
@@ -147,21 +149,9 @@ impl FromStr for Address {
         };
 
         let data = chars.collect::<String>();
-        let decoded_bs58_check = bs58::decode(data)
-            .with_check(None)
-            .into_vec()
-            .map_err(|_| ModelsError::AddressParseError)?;
-        let u64_deserializer = U64VarIntDeserializer::new(Included(0), Included(u64::MAX));
-        let (rest, _version) = u64_deserializer
-            .deserialize::<DeserializeError>(&decoded_bs58_check[..])
-            .map_err(|_| ModelsError::AddressParseError)?;
-        let res = UserAddress(Hash::from_bytes(
-            rest.try_into()
-                .map_err(|_| ModelsError::AddressParseError)?,
-        ));
         let res = match pref {
-            'U' => Address::User(res),
-            'S' => Address::SC(todo!()),
+            'U' => Address::User(UserAddress::from_str(&data)?),
+            'S' => Address::SC(SCAddress::from_str(&data)?),
             _ => return err,
         };
         Ok(res)
@@ -184,15 +174,17 @@ impl PreHashed for Address {}
 impl Address {
     /// Gets the associated thread. Depends on the `thread_count`
     pub fn get_thread(&self, thread_count: u8) -> u8 {
-        (self.hash_bytes()[0])
-            .checked_shr(8 - thread_count.trailing_zeros())
-            .unwrap_or(0)
+        match self {
+            Address::User(usr) => usr.get_thread(thread_count),
+            Address::SC(sc) => sc.thread(),
+        }
     }
 
-    fn hash_bytes(&self) -> &[u8; 32] {
+    /// If you know you have a UserAddress, you can get a direct reference, and avoind an alloc
+    fn hash_bytes(&self) -> Result<Vec<u8>, SerializeError> {
         match self {
-            Address::User(usr) => usr.0.to_bytes(),
-            Address::SC(_) => todo!(),
+            Address::User(usr) => Ok(usr.0.to_bytes().to_vec()),
+            Address::SC(sc) => sc.serialized_bytes(),
         }
     }
 
@@ -218,7 +210,14 @@ impl Address {
             Address::User(_) => b'U',
             Address::SC(_) => b'S',
         };
-        [&[pref][..], &self.hash_bytes()[..]].concat().to_vec()
+        [
+            &[pref][..],
+            &self
+                .hash_bytes()
+                .expect("does hash bytes of an SC actually ever error out?"),
+        ]
+        .concat()
+        .to_vec()
     }
 
     // TODO: work out a scheme to determine if it's a User address or SC address?
@@ -254,7 +253,11 @@ impl Address {
 
         match pref {
             b'U' => Ok(Address::User(UserAddress(hash))),
-            b'S' => Ok(Address::SC(todo!("SCAddress"))),
+            b'S' => Ok(Address::SC(
+                SCAddress::deserialize_bytes::<DeserializeError>(&data[1..])
+                    .map_err(|_| ModelsError::AddressParseError)
+                    .map(|r| r.1)?,
+            )),
             _ => Err(ModelsError::AddressParseError),
         }
     }
@@ -284,16 +287,12 @@ impl Serializer<Address> for AddressSerializer {
 
 /// Deserializer for `Address`
 #[derive(Default, Clone)]
-pub struct AddressDeserializer {
-    hash_deserializer: HashDeserializer,
-}
+pub struct AddressDeserializer;
 
 impl AddressDeserializer {
     /// Creates a new deserializer for `Address`
     pub const fn new() -> Self {
-        Self {
-            hash_deserializer: HashDeserializer::new(),
-        }
+        Self
     }
 }
 
@@ -314,21 +313,32 @@ impl Deserializer<Address> for AddressDeserializer {
         &self,
         buffer: &'a [u8],
     ) -> IResult<&'a [u8], Address, E> {
-        let (rest, pref) = context("Address Veriant", alt((char('U'), char('S')))).parse(buffer)?;
-        let (rest, res) = context("Failed Address deserialization", |input| {
-            self.hash_deserializer.deserialize(input)
-        })
-        .map(UserAddress)
-        .parse(rest)?;
-
-        // TODO: replace this match statement with idiomatic nom usage
-        let res = match pref {
-            'U' => Address::User(res),
-            'S' => Address::SC(todo!()),
-            _ => unreachable!("the variant parser only matches on 'U' and 'S'"),
-        };
-        Ok((rest, res))
+        context("Address Variant", alt((user_parser, sc_parser))).parse(buffer)
     }
+}
+// used to make the `alt(...)` more readable
+fn user_parser<'a, E: ParseError<&'a [u8]> + ContextError<&'a [u8]>>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], Address, E> {
+    context(
+        "Failed after matching on 'U' Prefix",
+        preceded(char('U'), |input| {
+            HashDeserializer::new().deserialize(input)
+        }),
+    )
+    .map(|hash| Address::User(UserAddress(hash)))
+    .parse(input)
+}
+// used to make the `alt(...)` more readable
+fn sc_parser<'a, E: ParseError<&'a [u8]> + ContextError<&'a [u8]>>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], Address, E> {
+    context(
+        "Failed after matching on 'S' Prefix",
+        preceded(char('S'), |input| SCAddress::deserialize_bytes(input)),
+    )
+    .map(|inner| Address::SC(inner))
+    .parse(input)
 }
 
 /// Info for a given address on a given cycle
