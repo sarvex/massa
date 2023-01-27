@@ -1,6 +1,7 @@
 use std::ops::Bound::{Excluded, Included};
 use std::str::FromStr;
 
+use crate::prehash::PreHashed;
 use crate::{
     config::THREAD_COUNT,
     error::ModelsError,
@@ -20,6 +21,22 @@ pub struct SCAddress {
     slot: Slot,
     idx: u64,
     is_write: bool,
+}
+
+#[allow(missing_docs)]
+#[derive(Clone, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct HashedSCAddress(pub Vec<u8>);
+impl PreHashed for HashedSCAddress {}
+
+impl From<SCAddress> for HashedSCAddress {
+    fn from(value: SCAddress) -> Self {
+        let mut vec = value.serialized_bytes().expect("this should never fail");
+        // The PreHashed trait requires 8-byte len minimum
+        if vec.len() < 8 {
+            vec.resize(8, 0);
+        }
+        Self(vec)
+    }
 }
 
 impl std::fmt::Debug for SCAddress {
