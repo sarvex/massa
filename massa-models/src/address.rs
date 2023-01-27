@@ -14,6 +14,10 @@ use nom::{IResult, Parser};
 use serde::{Deserialize, Serialize};
 use std::ops::Bound::Included;
 use std::str::FromStr;
+mod sc_addr;
+mod user_addr;
+pub use sc_addr::*;
+pub use user_addr::*;
 
 /// Size of a serialized address, in bytes
 pub const ADDRESS_SIZE_BYTES: usize = massa_hash::HASH_SIZE_BYTES + 1;
@@ -24,36 +28,13 @@ pub enum Address {
     #[allow(missing_docs)]
     User(UserAddress),
     #[allow(missing_docs)]
-    SC(UserAddress),
+    SC(SCAddress),
 }
-
-// TODO: Remove this impl when introducing `SCAddress`
-impl std::ops::Deref for Address {
-    type Target = UserAddress;
-
-    fn deref(&self) -> &Self::Target {
-        match self {
-            Address::User(add) | Address::SC(add) => add,
-        }
-    }
-}
-
-/// Derived from a public key.
-#[derive(Clone, Copy, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct UserAddress(pub Hash);
 
 const ADDRESS_PREFIX: char = 'A';
-const ADDRESS_VERSION: u64 = 0;
 
 impl std::fmt::Display for Address {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        let u64_serializer = U64VarIntSerializer::new();
-        // might want to allocate the vector with capacity in order to avoid re-allocation
-        let mut bytes: Vec<u8> = Vec::new();
-        u64_serializer
-            .serialize(&ADDRESS_VERSION, &mut bytes)
-            .map_err(|_| std::fmt::Error)?;
-        bytes.extend(*(*self).hash_bytes());
         write!(
             f,
             "{}{}{}",
@@ -62,7 +43,10 @@ impl std::fmt::Display for Address {
                 Address::User(_) => 'U',
                 Address::SC(_) => 'S',
             },
-            bs58::encode(bytes).with_check().into_string()
+            match self {
+                Address::User(usr) => usr,
+                Address::SC(sc) => todo!(),
+            },
         )
     }
 }
@@ -177,7 +161,7 @@ impl FromStr for Address {
         ));
         let res = match pref {
             'U' => Address::User(res),
-            'S' => Address::SC(res),
+            'S' => Address::SC(todo!()),
             _ => return err,
         };
         Ok(res)
@@ -206,7 +190,10 @@ impl Address {
     }
 
     fn hash_bytes(&self) -> &[u8; 32] {
-        (**self).0.to_bytes()
+        match self {
+            Address::User(usr) => usr.0.to_bytes(),
+            Address::SC(_) => todo!(),
+        }
     }
 
     /// Computes address associated with given public key
@@ -267,7 +254,7 @@ impl Address {
 
         match pref {
             b'U' => Ok(Address::User(UserAddress(hash))),
-            b'S' => Ok(Address::SC(UserAddress(hash))),
+            b'S' => Ok(Address::SC(todo!("SCAddress"))),
             _ => Err(ModelsError::AddressParseError),
         }
     }
@@ -337,7 +324,7 @@ impl Deserializer<Address> for AddressDeserializer {
         // TODO: replace this match statement with idiomatic nom usage
         let res = match pref {
             'U' => Address::User(res),
-            'S' => Address::SC(res),
+            'S' => Address::SC(todo!()),
             _ => unreachable!("the variant parser only matches on 'U' and 'S'"),
         };
         Ok((rest, res))
