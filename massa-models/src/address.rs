@@ -1,7 +1,6 @@
 // Copyright (c) 2022 MASSA LABS <info@massa.net>
 
 use crate::error::ModelsError;
-use crate::prehash::PreHashed;
 use massa_hash::{Hash, HashDeserializer};
 use massa_serialization::{Deserializer, Serializer};
 use massa_signature::PublicKey;
@@ -171,8 +170,6 @@ fn test_address_str_format() {
     let b = Address::from_str(&a).unwrap();
     assert_eq!(address, b);
 }
-
-impl PreHashed for Address {}
 
 impl Address {
     /// Gets the associated thread. Depends on the `thread_count`
