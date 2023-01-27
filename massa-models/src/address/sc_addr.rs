@@ -28,7 +28,7 @@ impl std::fmt::Debug for SCAddress {
             .field("slot", &self.slot)
             .field("idx", &self.idx)
             .field("is_write", &self.is_write)
-            .field("inner_address", &self.bs58_encode())
+            .field("encoded_address", &self.bs58_encode())
             .finish()
     }
 }
@@ -37,7 +37,10 @@ impl FromStr for SCAddress {
     type Err = ModelsError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Self::deserialize_bytes::<DeserializeError>(s.as_bytes())
+        let bytes = bs58::decode(s)
+            .into_vec()
+            .map_err(|_| ModelsError::AddressParseError)?;
+        Self::deserialize_bytes::<DeserializeError>(&bytes)
             .map_err(|_| ModelsError::AddressParseError)
             .map(|r| r.1)
     }
@@ -87,7 +90,9 @@ impl SCAddress {
     ) -> IResult<&'a [u8], Self, E> {
         SCAddressDeserializer.deserialize::<E>(&bytes)
     }
-    pub fn bs58_encode(&self) -> Result<String, SerializeError> {
+
+    /// Used for compact stringifying of the data.
+    pub(crate) fn bs58_encode(&self) -> Result<String, SerializeError> {
         Ok(bs58::encode(&self.serialized_bytes()?).into_string())
     }
 }
@@ -147,14 +152,30 @@ mod test {
 
     #[test]
     fn serde_loop() {
+        let addr = SCAddress::new(Slot::new(0, 1), 3, true);
+        let bytes = addr.serialized_bytes().unwrap();
+        let res = SCAddress::deserialize_bytes::<DeserializeError>(&bytes)
+            .unwrap()
+            .1;
+        assert_eq!(addr, res);
+    }
+
+    #[test]
+    fn str_loop() {
         let raw = "1LiC";
         let addr = SCAddress::new(Slot::new(0, 1), 3, true);
+
+        // intermediarry check that the un-prefixed string is as we want.
         assert_eq!(addr.bs58_encode().unwrap().to_string(), raw);
 
+        // add the leaders
         let with_leaders = format!("AS{}", raw);
-        let addr = Address::SC(addr);
-        assert_eq!(format!("{}", addr), with_leaders);
+        let wrapped_addr = Address::SC(addr);
 
-        assert_eq!(addr, Address::from_str(&with_leaders).unwrap());
+        // check the wrapped form generates the leaders
+        assert_eq!(format!("{}", wrapped_addr), with_leaders);
+
+        assert_eq!(wrapped_addr, Address::from_str(&with_leaders).unwrap());
+        assert_eq!(addr, SCAddress::from_str(&raw).unwrap())
     }
 }
