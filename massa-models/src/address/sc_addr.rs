@@ -1,3 +1,4 @@
+use core::fmt;
 use std::ops::Bound::{Excluded, Included};
 use std::str::FromStr;
 
@@ -8,8 +9,7 @@ use crate::{
     slot::{Slot, SlotDeserializer, SlotSerializer},
 };
 use massa_serialization::{
-    DeserializeError, Deserializer, SerializeError, Serializer, U64VarIntDeserializer,
-    U64VarIntSerializer,
+    Deserializer, SerializeError, Serializer, U64VarIntDeserializer, U64VarIntSerializer,
 };
 use nom::branch::alt;
 use nom::bytes::complete::tag;
@@ -25,17 +25,47 @@ pub struct SCAddress {
 
 #[allow(missing_docs)]
 #[derive(Clone, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct HashedSCAddress(pub Vec<u8>);
+pub struct HashedSCAddress(Vec<u8>);
+
+impl HashedSCAddress {
+    /// Used for compact stringifying of the data.
+    pub(crate) fn bs58_encode(&self) -> Result<String, SerializeError> {
+        Ok(bs58::encode(&self.0).into_string())
+    }
+}
 impl PreHashed for HashedSCAddress {}
+
+impl From<HashedSCAddress> for SCAddress {
+    fn from(value: HashedSCAddress) -> Self {
+        todo!()
+    }
+}
+impl From<HashedSCAddress> for Vec<u8> {
+    fn from(value: HashedSCAddress) -> Self {
+        // The PreHashed trait requires 8-byte len minimum
+        if value.0.len() >= 8 {
+            value.0
+        } else {
+            todo!("parse the bytes and return untruncated vals");
+        }
+    }
+}
+impl From<Vec<u8>> for HashedSCAddress {
+    fn from(mut value: Vec<u8>) -> Self {
+        // The PreHashed trait requires 8-byte len minimum
+        if value.len() < 8 {
+            value.resize(8, 0);
+        }
+        Self(value)
+    }
+}
 
 impl From<SCAddress> for HashedSCAddress {
     fn from(value: SCAddress) -> Self {
-        let mut vec = value.serialized_bytes().expect("this should never fail");
-        // The PreHashed trait requires 8-byte len minimum
-        if vec.len() < 8 {
-            vec.resize(8, 0);
-        }
-        Self(vec)
+        value
+            .serialized_bytes()
+            .expect("this should never fail")
+            .into()
     }
 }
 
@@ -45,21 +75,24 @@ impl std::fmt::Debug for SCAddress {
             .field("slot", &self.slot)
             .field("idx", &self.idx)
             .field("is_write", &self.is_write)
-            .field("encoded_address", &self.bs58_encode())
+            .field(
+                "encoded_address",
+                &HashedSCAddress::from(*self)
+                    .bs58_encode()
+                    .map_err(|_| fmt::Error)?,
+            )
             .finish()
     }
 }
 
-impl FromStr for SCAddress {
+impl FromStr for HashedSCAddress {
     type Err = ModelsError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let bytes = bs58::decode(s)
+        bs58::decode(s)
             .into_vec()
-            .map_err(|_| ModelsError::AddressParseError)?;
-        Self::deserialize_bytes::<DeserializeError>(&bytes)
+            .map(Self)
             .map_err(|_| ModelsError::AddressParseError)
-            .map(|r| r.1)
     }
 }
 
@@ -106,11 +139,6 @@ impl SCAddress {
         bytes: &'a [u8],
     ) -> IResult<&'a [u8], Self, E> {
         SCAddressDeserializer.deserialize::<E>(&bytes)
-    }
-
-    /// Used for compact stringifying of the data.
-    pub(crate) fn bs58_encode(&self) -> Result<String, SerializeError> {
-        Ok(bs58::encode(&self.serialized_bytes()?).into_string())
     }
 }
 

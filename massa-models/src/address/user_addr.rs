@@ -7,11 +7,12 @@ use massa_serialization::{
     U64VarIntSerializer,
 };
 
-use crate::{config::THREAD_COUNT, error::ModelsError};
+use crate::{config::THREAD_COUNT, error::ModelsError, prehash::PreHashed};
 const USER_ADDRESS_VERSION: u64 = 0;
 /// Derived from a public key.
 #[derive(Clone, Copy, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct UserAddress(pub Hash);
+impl PreHashed for UserAddress {}
 
 impl std::fmt::Debug for UserAddress {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

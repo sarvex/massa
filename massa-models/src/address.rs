@@ -3,7 +3,7 @@
 use crate::error::ModelsError;
 use crate::prehash::PreHashed;
 use massa_hash::{Hash, HashDeserializer};
-use massa_serialization::{DeserializeError, Deserializer, SerializeError, Serializer};
+use massa_serialization::{Deserializer, Serializer};
 use massa_signature::PublicKey;
 use nom::branch::alt;
 use nom::character::complete::char;
@@ -21,19 +21,22 @@ pub use user_addr::*;
 pub const ADDRESS_SIZE_BYTES: usize = massa_hash::HASH_SIZE_BYTES + 1;
 
 /// In future versions, the SC variant will encode slot, index and is_write directly
-#[derive(Clone, Copy, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum Address {
     #[allow(missing_docs)]
     User(UserAddress),
     #[allow(missing_docs)]
-    SC(SCAddress),
+    SC(HashedSCAddress),
 }
 
 impl std::fmt::Debug for Address {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::User(arg0) => f.debug_tuple("Address").field(arg0).finish(),
-            Self::SC(arg0) => f.debug_tuple("Address").field(arg0).finish(),
+            Self::SC(arg0) => f
+                .debug_tuple("Address")
+                .field(&SCAddress::from(arg0.clone()))
+                .finish(),
         }
     }
 }
@@ -151,7 +154,7 @@ impl FromStr for Address {
         let data = chars.collect::<String>();
         let res = match pref {
             'U' => Address::User(UserAddress::from_str(&data)?),
-            'S' => Address::SC(SCAddress::from_str(&data)?),
+            'S' => Address::SC(HashedSCAddress::from_str(&data)?),
             _ => return err,
         };
         Ok(res)
@@ -176,15 +179,15 @@ impl Address {
     pub fn get_thread(&self, thread_count: u8) -> u8 {
         match self {
             Address::User(usr) => usr.get_thread(thread_count),
-            Address::SC(sc) => sc.thread(),
+            Address::SC(sc) => SCAddress::from(sc.clone()).thread(),
         }
     }
 
     /// If you know you have a UserAddress, you can get a direct reference, and avoind an alloc
-    fn hash_bytes(&self) -> Result<Vec<u8>, SerializeError> {
+    fn hash_bytes(&self) -> Vec<u8> {
         match self {
-            Address::User(usr) => Ok(usr.0.to_bytes().to_vec()),
-            Address::SC(sc) => sc.serialized_bytes(),
+            Address::User(usr) => usr.0.to_bytes().to_vec(),
+            Address::SC(sc) => sc.clone().into(),
         }
     }
 
@@ -210,14 +213,7 @@ impl Address {
             Address::User(_) => b'U',
             Address::SC(_) => b'S',
         };
-        [
-            &[pref][..],
-            &self
-                .hash_bytes()
-                .expect("does hash bytes of an SC actually ever error out?"),
-        ]
-        .concat()
-        .to_vec()
+        [&[pref][..], &self.hash_bytes()].concat().to_vec()
     }
 
     // TODO: work out a scheme to determine if it's a User address or SC address?
@@ -245,19 +241,13 @@ impl Address {
             return Err(ModelsError::AddressParseError);
         };
 
-        let hash = Hash::from_bytes(
-            &data[1..]
-                .try_into()
-                .map_err(|_| ModelsError::AddressParseError)?,
-        );
-
         match pref {
-            b'U' => Ok(Address::User(UserAddress(hash))),
-            b'S' => Ok(Address::SC(
-                SCAddress::deserialize_bytes::<DeserializeError>(&data[1..])
-                    .map_err(|_| ModelsError::AddressParseError)
-                    .map(|r| r.1)?,
-            )),
+            b'U' => Ok(Address::User(UserAddress(Hash::from_bytes(
+                &data[1..]
+                    .try_into()
+                    .map_err(|_| ModelsError::AddressParseError)?,
+            )))),
+            b'S' => Ok(Address::SC(data[1..].to_vec().into())),
             _ => Err(ModelsError::AddressParseError),
         }
     }
@@ -337,7 +327,7 @@ fn sc_parser<'a, E: ParseError<&'a [u8]> + ContextError<&'a [u8]>>(
         "Failed after matching on 'S' Prefix",
         preceded(char('S'), |input| SCAddress::deserialize_bytes(input)),
     )
-    .map(|inner| Address::SC(inner))
+    .map(|inner| Address::SC(inner.into()))
     .parse(input)
 }
 
