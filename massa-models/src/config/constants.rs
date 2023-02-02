@@ -38,37 +38,17 @@ pub const CHANNEL_SIZE: usize = 1024;
 
 lazy_static::lazy_static! {
     /// Time in milliseconds when the blockclique started.
-    pub static ref GENESIS_TIMESTAMP: MassaTime = if cfg!(feature = "sandbox") {
-        std::env::var("GENESIS_TIMESTAMP").map(|timestamp| timestamp.parse::<u64>().unwrap().into()).unwrap_or_else(|_|
-            MassaTime::now()
-                .unwrap()
-                .saturating_add(MassaTime::from_millis(1000 * 10))
-        )
-    } else {
-        1675346400000.into()  // Thursday, February 02, 2022 14:00:00 AM UTC
-    };
+    pub static ref GENESIS_TIMESTAMP: MassaTime = 1675359119022.into();
 
     /// TESTNET: time when the blockclique is ended.
-    pub static ref END_TIMESTAMP: Option<MassaTime> = if cfg!(feature = "sandbox") {
-        None
-    } else {
-        Some(1677596400000.into())  // Tuesday, February 28, 2022 15:00:00 PM UTC
-    };
+    pub static ref END_TIMESTAMP: Option<MassaTime> = None;
     /// `KeyPair` to sign genesis blocks.
     pub static ref GENESIS_KEY: KeyPair = KeyPair::from_str("S1UxdCJv5ckDK8z87E5Jq5fEfSVLi2cTHgtpfZy7iURs3KpPns8")
         .unwrap();
     /// number of cycle misses (strictly) above which stakers are deactivated
     pub static ref POS_MISS_RATE_DEACTIVATION_THRESHOLD: Ratio<u64> = Ratio::new(7, 10);
     /// node version
-    pub static ref VERSION: Version = {
-        if cfg!(feature = "sandbox") {
-            "SAND.0.0"
-        } else {
-            "TEST.19.1"
-        }
-        .parse()
-        .unwrap()
-    };
+    pub static ref VERSION: Version = "LABN.7.7".parse().unwrap();
 }
 
 /// Price of a roll in the network
